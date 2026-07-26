@@ -11,87 +11,59 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Quicker.Public;
 
-// ============================================================
-// LiZhengRTFMerge  v1.2.2  Build: 20260726
-// 理正深基 RTF 计算书 合并为 A3 横向 Word
-// 封面(模板)+目录 单栏，正文 双栏，页码从正文首页=1
-// Roslyn v2 零样板模式：禁止 namespace/class
-//
-// v1.2.2 新增：抗拔承载力→受拉承载力区间字号设为 10pt
-// v1.2.1 修复：封面+目录页脚用 Range.Delete() 彻底清除
-// v1.2.0 新增：封面模板自动向上搜索 RTF 目录及所有父目录，适配独立 RTF 文件夹
-// v1.2.0 新增：封面模板自动向上搜索 RTF 目录及所有父目录，适配独立 RTF 文件夹
-// v1.1.1 修复：WaitForExit 放 ReadToEnd 之后，不阻塞管道导致 Quicker 悬停 15s
-// v1.1.0 修复：PageWidth/PageHeight 替代 PaperSize 枚举，Footers.Item() 替代 Footers()，
-//   InsertBreak 替代 PageBreakBefore 避免 RTF sect 冲突，每个 RTF 插入后立即修正纸张栏数，
-//   硬编码节索引 (cover=1, TOC=2, body=3+) 避免 InsertBreak 后计数错误
-// ============================================================
+// LiZhengRTFMerge v1.6.0 Build: 20260726
+// 纯 File.Write 写 PS 文件 — 避免 C# 字符串中文问题
 
 public static string Exec(IStepContext context)
 {
     try
     {
-        // —— 步骤1：选择 RTF 所在目录 ——
         string rtfDir = null;
-        using (var dialog = new FolderBrowserDialog())
+        using (var d = new FolderBrowserDialog())
         {
-            dialog.Description = "请选择包含 RTF 计算书的目录";
-            dialog.ShowNewFolderButton = false;
-            if (dialog.ShowDialog() != DialogResult.OK)
-                return "CANCELLED:NO_DIR";
-            rtfDir = dialog.SelectedPath;
+            d.Description = "请选择包含 RTF 计算书的目录";
+            d.ShowNewFolderButton = false;
+            if (d.ShowDialog() != DialogResult.OK) return "CANCELLED";
+            rtfDir = d.SelectedPath;
         }
 
-        // —— 步骤2：扫描 RTF 文件（自然排序），预处理字号 ——
-        var processedFiles = new List<string>();
-        foreach (var f in Directory.GetFiles(rtfDir, "*.RTF")
-            .OrderBy(f => NaturalSortKey(Path.GetFileName(f))))
-        {
-            processedFiles.Add(FixFontSizeInRtf(f, Path.GetFileName(f)));
-        }
-        var rtfFiles = processedFiles;
+        var rtfFiles = Directory.GetFiles(rtfDir, "*.RTF")
+            .OrderBy(f => NaturalSortKey(Path.GetFileName(f)))
+            .ToList();
 
         if (rtfFiles.Count == 0)
         {
-            MessageBox.Show("选择的目录中没有 RTF 文件。",
-                "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return "ERROR:NO_RTF_FILES";
+            MessageBox.Show("目录中没有 RTF 文件。", "提示");
+            return "NO_RTF";
         }
 
-        // —— 步骤3：选择保存位置 ——
         string savePath = null;
-        using (var dialog = new SaveFileDialog())
+        using (var d = new SaveFileDialog())
         {
-            dialog.Title = "保存合并后的 Word 文档";
-            dialog.Filter = "Word 文档 (*.docx)|*.docx";
-            dialog.DefaultExt = "docx";
-            dialog.FileName = "合并计算书.docx";
-            if (dialog.ShowDialog() != DialogResult.OK)
-                return "CANCELLED:NO_SAVE_PATH";
-            savePath = dialog.FileName;
+            d.Title = "保存合并后的 Word 文档";
+            d.Filter = "Word 文档 (*.docx)|*.docx";
+            d.DefaultExt = "docx";
+            d.FileName = "合并计算书.docx";
+            if (d.ShowDialog() != DialogResult.OK) return "CANCELLED";
+            savePath = d.FileName;
         }
 
-        // —— 步骤4：定位封面模板 ——
         string coverPath = null;
-        string lookIn = rtfDir;
-        while (lookIn != null)
+        string look = rtfDir;
+        while (look != null)
         {
-            string candidate = Path.Combine(lookIn, "封面.docx");
-            if (File.Exists(candidate)) { coverPath = candidate; break; }
-            lookIn = Path.GetDirectoryName(lookIn);
+            string c = Path.Combine(look, "封面.docx");
+            if (File.Exists(c)) { coverPath = c; break; }
+            look = Path.GetDirectoryName(look);
         }
         if (coverPath == null)
             coverPath = @"C:\Users\12089\Desktop\最终计算书\封面.docx";
         bool hasCover = File.Exists(coverPath);
 
-        // —— 步骤5：生成 PowerShell 脚本 ——
-        string psScript = BuildPowerShellScript(rtfFiles, savePath, coverPath, hasCover);
+        // Write PS file
+        string psFile = Path.GetTempFileName() + ".ps1";
+        PSWrite(psFile, rtfFiles, savePath, coverPath, hasCover);
 
-        string psFile = Path.Combine(Path.GetTempPath(),
-            "LiZhengMerge_" + Guid.NewGuid().ToString("N") + ".ps1");
-        File.WriteAllText(psFile, psScript, new UTF8Encoding(true));
-
-        // —— 步骤6：执行 PowerShell ——
         var psi = new ProcessStartInfo
         {
             FileName = "powershell.exe",
@@ -99,307 +71,212 @@ public static string Exec(IStepContext context)
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            CreateNoWindow = true,
-            WorkingDirectory = Path.GetDirectoryName(coverPath) ?? rtfDir
+            CreateNoWindow = true
         };
 
-        using (var process = Process.Start(psi))
+        using (var p = Process.Start(psi))
         {
-            string psOutput = process.StandardOutput.ReadToEnd();
-            string psError = process.StandardError.ReadToEnd();
-            process.WaitForExit(600000); // 10 分钟超时
-
-            if (process.ExitCode != 0)
+            string so = p.StandardOutput.ReadToEnd();
+            string se = p.StandardError.ReadToEnd();
+            p.WaitForExit(600000);
+            if (p.ExitCode != 0)
             {
-                // 异步 Tick 的 stdout 不可靠 — 不做 ReadToEnd 防止死锁
-                string errMsg = "PS_EXIT_" + process.ExitCode;
                 try { File.Delete(psFile); } catch { }
-                MessageBox.Show(
-                    "Word 合并失败。\n\n错误码: " + errMsg,
-                    "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return errMsg;
+                MessageBox.Show("Word 合并失败。\n\n" + se + "\n" + so, "错误");
+                return "PS_FAIL_" + p.ExitCode;
             }
         }
 
         try { File.Delete(psFile); } catch { }
 
-        // —— 步骤7：验证并报告 ——
         if (File.Exists(savePath))
         {
             var fi = new FileInfo(savePath);
-            MessageBox.Show(
-                "合并完成！\n\n文件: " + savePath +
-                "\n大小: " + (fi.Length / 1024.0).ToString("F1") + " KB" +
-                "\n包含 " + rtfFiles.Count + " 个 RTF 文件",
-                "完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("合并完成！\n\n" + savePath + "\n大小: " + (fi.Length / 1024.0).ToString("F1") + " KB\n包含 " + rtfFiles.Count + " 个 RTF", "完成");
             return savePath;
         }
         else
         {
-            MessageBox.Show("合并完成但未找到输出文件。",
-                "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return "WARNING:NO_OUTPUT";
+            MessageBox.Show("合并完成但未找到输出文件。", "警告");
+            return "WARNING";
         }
     }
     catch (Exception ex)
     {
-        MessageBox.Show("执行异常: " + ex.Message,
-            "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBox.Show("异常: " + ex.Message, "错误");
         return "ERROR:" + ex.Message;
     }
 }
 
-// ================================================================
-// 自然排序：数字前补零，使 "2-2.RTF" < "10-10.RTF"
-// ================================================================
-static string NaturalSortKey(string filename)
-{
-    return Regex.Replace(filename, @"\d+", m => m.Value.PadLeft(10, '0'));
-}
+static string NaturalSortKey(string f) { return Regex.Replace(f, @"\d+", m => m.Value.PadLeft(10, '0')); }
 
-// ================================================================
-// RTF 字号预处理：抗拔承载力→受拉承载力 区间内 \fsXX → \fs20 (10pt)
-// 操作在原始 RTF 的 GB2312 字节层面进行，避免 Roslyn→PS 中文编码问题
-// ================================================================
-static string FixFontSizeInRtf(string rtfPath, string originalName)
+static string EP(string s) { return s.Replace("'", "''"); }
+
+// Write PS file line-by-line — no C# here-string, no Chinese in C# source
+static void PSWrite(string path, List<string> rtfs, string outPath, string cover, bool hasCover)
 {
-    string tmpFile = null;
-    try
+    using (var w = new StreamWriter(path, false, new UTF8Encoding(true)))
     {
-        // 读 RTF 原始文本
-        string rtf = File.ReadAllText(rtfPath, Encoding.GetEncoding(936));
+        w.NewLine = "\r\n";
+        w.WriteLine("$ErrorActionPreference = 'Stop'");
+        w.WriteLine("");
+        w.WriteLine("$OutputPath = '" + EP(outPath) + "'");
+        w.WriteLine("$CoverPath = '" + EP(cover) + "'");
+        w.WriteLine("$HasCover = $" + (hasCover ? "true" : "false"));
+        w.WriteLine("$RtfFiles = @(");
+        foreach (var f in rtfs) w.WriteLine("    '" + EP(f) + "'");
+        w.WriteLine(")");
+        w.WriteLine("");
 
-        // 定位区间标题（在 RTF 中中文用 \'xx 编码）
-        string need1 = @"\'bf\'b9\'b0\'ce\'b3\'d0\'d4\'d8\'c1\'a6\'d1\'e9\'cb\'e3\'bd\'e1\'b9\'fb"; // 抗拔承载力验算结果
-        string need2 = @"\'ca\'dc\'c0\'ad\'b3\'d0\'d4\'d8\'c1\'a6\'d1\'e9\'cb\'e3\'bd\'e1\'b9\'fb"; // 受拉承载力验算结果
+        w.WriteLine("try {");
+        w.WriteLine("    $word = New-Object -ComObject Word.Application");
+        w.WriteLine("    $word.Visible = $false");
+        w.WriteLine("    $word.DisplayAlerts = 0");
+        w.WriteLine("    $doc = $word.Documents.Add()");
+        w.WriteLine("    $selection = $word.Selection");
+        w.WriteLine("");
+        w.WriteLine("    $doc.PageSetup.PageWidth = $word.CentimetersToPoints(42.0)");
+        w.WriteLine("    $doc.PageSetup.PageHeight = $word.CentimetersToPoints(29.7)");
+        w.WriteLine("    $doc.PageSetup.Orientation = 1");
+        w.WriteLine("    $doc.PageSetup.TopMargin    = $word.CentimetersToPoints(2.0)");
+        w.WriteLine("    $doc.PageSetup.BottomMargin = $word.CentimetersToPoints(2.0)");
+        w.WriteLine("    $doc.PageSetup.LeftMargin   = $word.CentimetersToPoints(2.5)");
+        w.WriteLine("    $doc.PageSetup.RightMargin  = $word.CentimetersToPoints(2.5)");
+        w.WriteLine("");
+        w.WriteLine("    $heading1Style = $doc.Styles(-2)");
+        w.WriteLine("    $normalStyle   = $doc.Styles(-1)");
+        w.WriteLine("");
+        w.WriteLine("    function Fix-A3Page($sec) {");
+        w.WriteLine("        $sec.PageSetup.PageWidth = $word.CentimetersToPoints(42.0)");
+        w.WriteLine("        $sec.PageSetup.PageHeight = $word.CentimetersToPoints(29.7)");
+        w.WriteLine("        $sec.PageSetup.Orientation = 1");
+        w.WriteLine("        $sec.PageSetup.TextColumns.SetCount(2)");
+        w.WriteLine("    }");
+        w.WriteLine("");
 
-        int idx1 = rtf.IndexOf(need1, StringComparison.Ordinal);
-        int idx2 = rtf.IndexOf(need2, StringComparison.Ordinal);
-
-        // 若两个标题都存在且顺序正确（idx1 < idx2），预处理区间
-        if (idx1 >= 0 && idx2 > idx1)
+        if (hasCover)
         {
-            string prefix = rtf.Substring(0, idx1);
-            string interval = rtf.Substring(idx1, idx2 - idx1);
-            string suffix = rtf.Substring(idx2);
-
-            // 替换 \fsXX 为 \fs18（小五号=9pt=18 half-pts）
-            interval = Regex.Replace(interval, @"\\fs(\d+)",
-                m => m.Groups[1].Value == "18" ? m.Value : @"\fs18");
-
-            rtf = prefix + interval + suffix;
+            w.WriteLine("    if ($HasCover -and (Test-Path $CoverPath)) {");
+            w.WriteLine("        $selection.InsertFile($CoverPath)");
+            w.WriteLine("        Fix-A3Page $doc.Sections($doc.Sections.Count)");
+            w.WriteLine("        [void]$selection.InsertBreak(2)");
+            w.WriteLine("    }");
         }
 
-        // 写入临时文件，文件名直接用原始名称（无 Guid）
-        tmpFile = Path.Combine(Path.GetTempPath(), originalName);
-        File.WriteAllText(tmpFile, rtf, Encoding.GetEncoding(936));
+        w.WriteLine("");
+        w.WriteLine("    $selection.Font.Size = 22");
+        w.WriteLine("    $selection.Font.Bold = $true");
+        w.WriteLine("    $selection.ParagraphFormat.Alignment = 1");
+        string tocText = "\u76EE  \u5F55"; // 目  录
+        w.WriteLine("    $selection.TypeText(\"" + tocText + "\")");
+        w.WriteLine("    $selection.TypeParagraph()");
+        w.WriteLine("    $selection.TypeParagraph()");
+        w.WriteLine("    $tocRange = $selection.Range.Duplicate");
+        w.WriteLine("    $tocRange.Collapse(1)");
+        w.WriteLine("    [void]$doc.TablesOfContents.Add($tocRange, $true, 1, 1)");
+        w.WriteLine("    [void]$selection.InsertBreak(2)");
+        w.WriteLine("");
 
-        return tmpFile;
+        w.WriteLine("    $isFirst = $true");
+        w.WriteLine("    foreach ($rtf in $RtfFiles) {");
+        w.WriteLine("        if (-not (Test-Path $rtf)) { continue }");
+        w.WriteLine("        $headingText = [System.IO.Path]::GetFileNameWithoutExtension($rtf)");
+        w.WriteLine("        if (-not $isFirst) { [void]$selection.InsertBreak(2) }");
+        w.WriteLine("        $isFirst = $false");
+        w.WriteLine("        $selection.Style = $heading1Style");
+        w.WriteLine("        $selection.TypeText($headingText)");
+        w.WriteLine("        $selection.TypeParagraph()");
+        w.WriteLine("        $selection.Style = $normalStyle");
+        w.WriteLine("        $selection.InsertFile($rtf)");
+        w.WriteLine("        Fix-A3Page $doc.Sections($doc.Sections.Count)");
+        w.WriteLine("");
+
+        // font-size fix: Find 抗拔 → 受拉 → set 9pt
+        string tb = "\u6297\u62D4\u627F\u8F7D\u529B\u9A8C\u7B97\u7ED3\u679C"; // 抗拔承载力验算结果
+        string tl = "\u53D7\u62C9\u627F\u8F7D\u529B\u9A8C\u7B97\u7ED3\u679C"; // 受拉承载力验算结果
+        w.WriteLine("        try {");
+        w.WriteLine("            $cs = $doc.Sections($doc.Sections.Count)");
+        w.WriteLine("            $sr = $cs.Range.Duplicate");
+        w.WriteLine("            $f1 = $sr.Duplicate");
+        w.WriteLine("            $f1.Find.ClearFormatting()");
+        w.WriteLine("            $f1.Find.Text = \"" + tb + "\"");
+        w.WriteLine("            if ($f1.Find.Execute()) {");
+        w.WriteLine("                $at = $f1.End + 1");
+        w.WriteLine("                $f2 = $sr.Duplicate");
+        w.WriteLine("                $f2.Find.ClearFormatting()");
+        w.WriteLine("                $f2.Find.Text = \"" + tl + "\"");
+        w.WriteLine("                if ($f2.Find.Execute()) {");
+        w.WriteLine("                    $be = $f2.Start");
+        w.WriteLine("                    $md = $sr.Duplicate");
+        w.WriteLine("                    $md.SetRange($at, $be)");
+        w.WriteLine("                    $md.Font.Size = 9");
+        w.WriteLine("                }");
+        w.WriteLine("            }");
+        w.WriteLine("        }");
+        w.WriteLine("        catch { }");
+        w.WriteLine("    }");
+        w.WriteLine("");
+
+        w.WriteLine("    $totalSections = $doc.Sections.Count");
+        w.WriteLine("    if ($HasCover) { $bodyStartIdx = 3 } else { $bodyStartIdx = 2 }");
+        w.WriteLine("    for ($i = 1; $i -le $totalSections; $i++) {");
+        w.WriteLine("        $sec = $doc.Sections($i)");
+        w.WriteLine("        Fix-A3Page $sec");
+        w.WriteLine("        if ($i -lt $bodyStartIdx) {");
+        w.WriteLine("            $sec.PageSetup.TextColumns.SetCount(1)");
+        w.WriteLine("            $sec.PageSetup.TextColumns.LineBetween = $false");
+        w.WriteLine("        }");
+        w.WriteLine("    }");
+        w.WriteLine("");
+
+        w.WriteLine("    for ($i = 1; $i -le $totalSections; $i++) {");
+        w.WriteLine("        $doc.Sections($i).Footers.Item(1).LinkToPrevious = $false");
+        w.WriteLine("    }");
+        w.WriteLine("    for ($i = 1; $i -lt $bodyStartIdx; $i++) {");
+        w.WriteLine("        $f = $doc.Sections($i).Footers.Item(1)");
+        w.WriteLine("        [void]$f.Range.Delete()");
+        w.WriteLine("    }");
+        w.WriteLine("");
+
+        w.WriteLine("    if ($bodyStartIdx -le $totalSections) {");
+        w.WriteLine("        $firstFooter = $doc.Sections($bodyStartIdx).Footers.Item(1)");
+        w.WriteLine("        $firstFooter.LinkToPrevious = $false");
+        w.WriteLine("        [void]$firstFooter.PageNumbers.Add(2)");
+        w.WriteLine("        $firstFooter.PageNumbers.RestartNumberingAtSection = $true");
+        w.WriteLine("        $firstFooter.PageNumbers.StartingNumber = 1");
+        w.WriteLine("        for ($i = $bodyStartIdx + 1; $i -le $totalSections; $i++) {");
+        w.WriteLine("            $doc.Sections($i).Footers.Item(1).LinkToPrevious = $true");
+        w.WriteLine("        }");
+        w.WriteLine("    }");
+        w.WriteLine("");
+
+        w.WriteLine("    if ($doc.TablesOfContents.Count -gt 0) {");
+        w.WriteLine("        [void]$doc.TablesOfContents(1).Update()");
+        w.WriteLine("    }");
+        w.WriteLine("    [void]$selection.HomeKey(6)");
+        w.WriteLine("");
+
+        w.WriteLine("    if (Test-Path $OutputPath) { Remove-Item $OutputPath -Force -ErrorAction SilentlyContinue }");
+        w.WriteLine("    $saveAsPath = [string]$OutputPath");
+        w.WriteLine("    $saveAsFormat = [int]16");
+        w.WriteLine("    [void]$doc.SaveAs([ref]$saveAsPath, [ref]$saveAsFormat)");
+        w.WriteLine("    $doc.Close()");
+        w.WriteLine("    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null");
+        w.WriteLine("    try { $word.Quit() } catch {}");
+        w.WriteLine("    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null");
+        w.WriteLine("    [System.GC]::Collect()");
+        w.WriteLine("    [System.GC]::WaitForPendingFinalizers()");
+        w.WriteLine("    Write-Output 'SUCCESS'");
+        w.WriteLine("}");
+        w.WriteLine("catch {");
+        w.WriteLine("    $msg = $_.Exception.Message");
+        w.WriteLine("    Write-Error $msg");
+        w.WriteLine("    if ($doc) { try { $doc.Close(0) } catch {} }");
+        w.WriteLine("    if ($word) {");
+        w.WriteLine("        try { $word.Quit() } catch {}");
+        w.WriteLine("        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null");
+        w.WriteLine("    }");
+        w.WriteLine("    exit 1");
+        w.WriteLine("}");
     }
-    catch
-    {
-        // 预处理失败 → 回退原始文件
-        if (tmpFile != null) try { File.Delete(tmpFile); } catch { }
-        return rtfPath;
-    }
-}
-
-
-// ================================================================
-// 构建 PowerShell 脚本
-// 中文使用 [char]0xXXXX 避免编码问题
-// ================================================================
-static string BuildPowerShellScript(
-    List<string> rtfFiles,
-    string outputPath,
-    string coverPath,
-    bool hasCover)
-{
-    var sb = new StringBuilder();
-
-    // --- 变量区 ---
-    sb.AppendLine("$OutputPath = '" + EscapePS(outputPath) + "'");
-    sb.AppendLine("$CoverPath = '" + EscapePS(coverPath) + "'");
-    sb.AppendLine("$HasCover = $" + (hasCover ? "true" : "false"));
-    sb.AppendLine("$RtfFiles = @(");
-    foreach (var f in rtfFiles)
-        sb.AppendLine("    '" + EscapePS(f) + "'");
-    sb.AppendLine(")");
-    sb.AppendLine();
-
-    // --- 主逻辑 ---
-    sb.Append(@"$ErrorActionPreference = 'Stop'
-
-try {
-    # ===== 创建 Word 对象 =====
-    $word = New-Object -ComObject Word.Application
-    $word.Visible = $false
-    $word.DisplayAlerts = 0
-
-    $doc = $word.Documents.Add()
-    $selection = $word.Selection
-
-    # ===== 全局页面设置：A3 横向（PageWidth/PageHeight 比 PaperSize 枚举更可靠）=====
-    [void]$doc.PageSetup
-    $doc.PageSetup.PageWidth = $word.CentimetersToPoints(42.0)
-    $doc.PageSetup.PageHeight = $word.CentimetersToPoints(29.7)
-    $doc.PageSetup.Orientation = 1        # wdOrientLandscape
-    $doc.PageSetup.TopMargin    = $word.CentimetersToPoints(2.0)
-    $doc.PageSetup.BottomMargin = $word.CentimetersToPoints(2.0)
-    $doc.PageSetup.LeftMargin   = $word.CentimetersToPoints(2.5)
-    $doc.PageSetup.RightMargin  = $word.CentimetersToPoints(2.5)
-
-    $heading1Style = $doc.Styles(-2)      # wdStyleHeading1
-    $normalStyle   = $doc.Styles(-1)      # wdStyleNormal
-
-    function Fix-A3Page($sec) {
-        $sec.PageSetup.PageWidth = $word.CentimetersToPoints(42.0)
-        $sec.PageSetup.PageHeight = $word.CentimetersToPoints(29.7)
-        $sec.PageSetup.Orientation = 1
-        $sec.PageSetup.TextColumns.SetCount(2)
-    }
-
-    # ===== 第 1 节：封面 =====");
-    sb.AppendLine();
-
-    if (hasCover)
-    {
-        sb.Append(@"    if ($HasCover -and (Test-Path $CoverPath)) {
-        $selection.InsertFile($CoverPath)
-        Fix-A3Page $doc.Sections($doc.Sections.Count)
-        [void]$selection.InsertBreak(2)    # wdSectionBreakNextPage
-    }
-");
-    }
-
-    sb.Append(@"
-    # ===== 目录节 =====
-    # 注意：封面占1节，TOC=从当前最后一节开始，正文=之后
-    $selection.Font.Size = 22
-    $selection.Font.Bold = $true
-    $selection.ParagraphFormat.Alignment = 1  # wdAlignParagraphCenter
-    $selection.TypeText([char]0x76EE + '  ' + [char]0x5F55)   # 目  录
-    $selection.TypeParagraph()
-    $selection.TypeParagraph()
-
-    # 插入 TOC 域（仅收录 Heading 1）
-    $tocFieldRange = $selection.Range.Duplicate
-    $tocFieldRange.Collapse(1)
-    [void]$doc.TablesOfContents.Add($tocFieldRange, $true, 1, 1)
-
-    # 分节符（下一页）→ 正文
-    [void]$selection.InsertBreak(2)
-
-    # ===== 正文节：逐个 RTF 插入 =====
-    $isFirst = $true
-    foreach ($rtf in $RtfFiles) {
-        if (-not (Test-Path $rtf)) { continue }
-
-        $headingText = [System.IO.Path]::GetFileNameWithoutExtension($rtf)
-
-        # 分节符（下一页），从第二个 RTF 开始
-        if (-not $isFirst) { [void]$selection.InsertBreak(2) }
-        $isFirst = $false
-
-        # 一级标题
-        $selection.Style = $heading1Style
-        $selection.TypeText($headingText)
-        $selection.TypeParagraph()
-
-        # 恢复正常样式，插入 RTF 内容
-        $selection.Style = $normalStyle
-        $selection.InsertFile($rtf)
-
-        # RTF InsertFile 覆盖纸张和栏数 → 立即修正当前节为 A3 双栏
-        Fix-A3Page $doc.Sections($doc.Sections.Count)
-    }
-
-    # ===== 列数 + 纸张最终修正 =====
-    $totalSections = $doc.Sections.Count
-    if ($HasCover) {
-        $bodyStartIdx = 3  # 封面=1, TOC=2, 正文=3+
-    } else {
-        $bodyStartIdx = 2  # TOC=1, 正文=2+
-    }
-    for ($i = 1; $i -le $totalSections; $i++) {
-        $sec = $doc.Sections($i)
-        Fix-A3Page $sec
-        if ($i -lt $bodyStartIdx) {
-            $sec.PageSetup.TextColumns.SetCount(1)
-            $sec.PageSetup.TextColumns.LineBetween = $false
-        }
-    }
-
-    # ===== 页脚：封面+目录无页码，正文页码从 1 开始 =====
-    # 先断开所有节的页脚链接（指向首页）以防止交叉污染
-    for ($i = 1; $i -le $totalSections; $i++) {
-        $doc.Sections($i).Footers.Item(1).LinkToPrevious = $false
-    }
-
-    # 封面/TOC 清除页脚
-    for ($i = 1; $i -lt $bodyStartIdx; $i++) {
-        $f = $doc.Sections($i).Footers.Item(1)
-        [void]$f.Range.Delete()
-    }
-
-    # 正文首页插入页码，从 1 开始
-    if ($bodyStartIdx -le $totalSections) {
-        $firstFooter = $doc.Sections($bodyStartIdx).Footers.Item(1)
-        $firstFooter.LinkToPrevious = $false
-        [void]$firstFooter.PageNumbers.Add(2)      # wdAlignPageNumberRight
-        $firstFooter.PageNumbers.RestartNumberingAtSection = $true
-        $firstFooter.PageNumbers.StartingNumber = 1
-
-        for ($i = $bodyStartIdx + 1; $i -le $totalSections; $i++) {
-            $doc.Sections($i).Footers.Item(1).LinkToPrevious = $true
-        }
-    }
-
-    # ===== 更新目录 =====
-    if ($doc.TablesOfContents.Count -gt 0) {
-        [void]$doc.TablesOfContents(1).Update()
-    }
-
-    # 回到文档开头
-    [void]$selection.HomeKey(6)   # wdStory
-
-    # ===== 保存 =====
-    if (Test-Path $OutputPath) {
-        Remove-Item $OutputPath -Force -ErrorAction SilentlyContinue
-    }
-    $saveAsPath = [string]$OutputPath
-    $saveAsFormat = [int]16
-    [void]$doc.SaveAs([ref]$saveAsPath, [ref]$saveAsFormat)
-
-    $doc.Close()
-    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
-
-    try { $word.Quit() } catch {}
-    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
-    [System.GC]::Collect()
-    [System.GC]::WaitForPendingFinalizers()
-
-    Write-Output 'SUCCESS'
-}
-catch {
-    $msg = $_.Exception.Message
-    Write-Error $msg
-    if ($doc) { try { $doc.Close(0) } catch {} }
-    if ($word) {
-        try { $word.Quit() } catch {}
-        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
-    }
-    exit 1
-}
-");
-
-    return sb.ToString();
-}
-
-// ================================================================
-// PowerShell 单引号字符串转义（仅需转义单引号本身）
-// ================================================================
-static string EscapePS(string s)
-{
-    return s.Replace("'", "''");
 }
