@@ -12,11 +12,12 @@ using System.Windows.Forms;
 using Quicker.Public;
 
 // ============================================================
-// LiZhengRTFMerge  v1.1.1  Build: 20260726
+// LiZhengRTFMerge  v1.2.0  Build: 20260726
 // 理正深基 RTF 计算书 合并为 A3 横向 Word
 // 封面(模板)+目录 单栏，正文 双栏，页码从正文首页=1
 // Roslyn v2 零样板模式：禁止 namespace/class
 //
+// v1.2.0 新增：封面模板自动向上搜索 RTF 目录及所有父目录，适配独立 RTF 文件夹
 // v1.1.1 修复：WaitForExit 放 ReadToEnd 之后，不阻塞管道导致 Quicker 悬停 15s
 // v1.1.0 修复：PageWidth/PageHeight 替代 PaperSize 枚举，Footers.Item() 替代 Footers()，
 //   InsertBreak 替代 PageBreakBefore 避免 RTF sect 冲突，每个 RTF 插入后立即修正纸张栏数，
@@ -64,7 +65,16 @@ public static string Exec(IStepContext context)
         }
 
         // —— 步骤4：定位封面模板 ——
-        string coverPath = @"C:\Users\12089\Desktop\最终计算书\封面.docx";
+        string coverPath = null;
+        string lookIn = rtfDir;
+        while (lookIn != null)
+        {
+            string candidate = Path.Combine(lookIn, "封面.docx");
+            if (File.Exists(candidate)) { coverPath = candidate; break; }
+            lookIn = Path.GetDirectoryName(lookIn);
+        }
+        if (coverPath == null)
+            coverPath = @"C:\Users\12089\Desktop\最终计算书\封面.docx";
         bool hasCover = File.Exists(coverPath);
 
         // —— 步骤5：生成 PowerShell 脚本 ——
@@ -82,7 +92,8 @@ public static string Exec(IStepContext context)
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(coverPath) ?? rtfDir
         };
 
         using (var process = Process.Start(psi))
