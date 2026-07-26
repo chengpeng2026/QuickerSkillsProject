@@ -12,11 +12,14 @@ using System.Windows.Forms;
 using Quicker.Public;
 
 // ============================================================
-// LiZhengRTFMerge  v1.2.0  Build: 20260726
+// LiZhengRTFMerge  v1.2.2  Build: 20260726
 // 理正深基 RTF 计算书 合并为 A3 横向 Word
 // 封面(模板)+目录 单栏，正文 双栏，页码从正文首页=1
 // Roslyn v2 零样板模式：禁止 namespace/class
 //
+// v1.2.2 新增：抗拔承载力→受拉承载力区间字号设为 10pt
+// v1.2.1 修复：封面+目录页脚用 Range.Delete() 彻底清除
+// v1.2.0 新增：封面模板自动向上搜索 RTF 目录及所有父目录，适配独立 RTF 文件夹
 // v1.2.0 新增：封面模板自动向上搜索 RTF 目录及所有父目录，适配独立 RTF 文件夹
 // v1.1.1 修复：WaitForExit 放 ReadToEnd 之后，不阻塞管道导致 Quicker 悬停 15s
 // v1.1.0 修复：PageWidth/PageHeight 替代 PaperSize 枚举，Footers.Item() 替代 Footers()，
@@ -39,10 +42,14 @@ public static string Exec(IStepContext context)
             rtfDir = dialog.SelectedPath;
         }
 
-        // —— 步骤2：扫描 RTF 文件（自然排序） ——
-        var rtfFiles = Directory.GetFiles(rtfDir, "*.RTF")
-            .OrderBy(f => NaturalSortKey(Path.GetFileName(f)))
-            .ToList();
+        // —— 步骤2：扫描 RTF 文件（自然排序），预处理字号 ——
+        var processedFiles = new List<string>();
+        foreach (var f in Directory.GetFiles(rtfDir, "*.RTF")
+            .OrderBy(f => NaturalSortKey(Path.GetFileName(f))))
+        {
+            processedFiles.Add(FixFontSizeInRtf(f, Path.GetFileName(f)));
+        }
+        var rtfFiles = processedFiles;
 
         if (rtfFiles.Count == 0)
         {
@@ -151,6 +158,54 @@ static string NaturalSortKey(string filename)
 }
 
 // ================================================================
+// RTF 字号预处理：抗拔承载力→受拉承载力 区间内 \fsXX → \fs20 (10pt)
+// 操作在原始 RTF 的 GB2312 字节层面进行，避免 Roslyn→PS 中文编码问题
+// ================================================================
+static string FixFontSizeInRtf(string rtfPath, string originalName)
+{
+    string tmpFile = null;
+    try
+    {
+        // 读 RTF 原始文本
+        string rtf = File.ReadAllText(rtfPath, Encoding.GetEncoding(936));
+
+        // 定位区间标题（在 RTF 中中文用 \'xx 编码）
+        string need1 = @"\'bf\'b9\'b0\'ce\'b3\'d0\'d4\'d8\'c1\'a6\'d1\'e9\'cb\'e3\'bd\'e1\'b9\'fb"; // 抗拔承载力验算结果
+        string need2 = @"\'ca\'dc\'c0\'ad\'b3\'d0\'d4\'d8\'c1\'a6\'d1\'e9\'cb\'e3\'bd\'e1\'b9\'fb"; // 受拉承载力验算结果
+
+        int idx1 = rtf.IndexOf(need1, StringComparison.Ordinal);
+        int idx2 = rtf.IndexOf(need2, StringComparison.Ordinal);
+
+        // 若两个标题都存在且顺序正确（idx1 < idx2），预处理区间
+        if (idx1 >= 0 && idx2 > idx1)
+        {
+            string prefix = rtf.Substring(0, idx1);
+            string interval = rtf.Substring(idx1, idx2 - idx1);
+            string suffix = rtf.Substring(idx2);
+
+            // 替换 \fsXX 为 \fs18（小五号=9pt=18 half-pts）
+            interval = Regex.Replace(interval, @"\\fs(\d+)",
+                m => m.Groups[1].Value == "18" ? m.Value : @"\fs18");
+
+            rtf = prefix + interval + suffix;
+        }
+
+        // 写入临时文件，文件名直接用原始名称（无 Guid）
+        tmpFile = Path.Combine(Path.GetTempPath(), originalName);
+        File.WriteAllText(tmpFile, rtf, Encoding.GetEncoding(936));
+
+        return tmpFile;
+    }
+    catch
+    {
+        // 预处理失败 → 回退原始文件
+        if (tmpFile != null) try { File.Delete(tmpFile); } catch { }
+        return rtfPath;
+    }
+}
+
+
+// ================================================================
 // 构建 PowerShell 脚本
 // 中文使用 [char]0xXXXX 避免编码问题
 // ================================================================
@@ -202,7 +257,6 @@ try {
         $sec.PageSetup.PageHeight = $word.CentimetersToPoints(29.7)
         $sec.PageSetup.Orientation = 1
         $sec.PageSetup.TextColumns.SetCount(2)
-        $sec.PageSetup.TextColumns.LineBetween = $true
     }
 
     # ===== 第 1 节：封面 =====");
@@ -277,14 +331,22 @@ try {
     }
 
     # ===== 页脚：封面+目录无页码，正文页码从 1 开始 =====
-    for ($i = 1; $i -lt $bodyStartIdx; $i++) {
+    # 先断开所有节的页脚链接（指向首页）以防止交叉污染
+    for ($i = 1; $i -le $totalSections; $i++) {
         $doc.Sections($i).Footers.Item(1).LinkToPrevious = $false
     }
 
+    # 封面/TOC 清除页脚
+    for ($i = 1; $i -lt $bodyStartIdx; $i++) {
+        $f = $doc.Sections($i).Footers.Item(1)
+        [void]$f.Range.Delete()
+    }
+
+    # 正文首页插入页码，从 1 开始
     if ($bodyStartIdx -le $totalSections) {
         $firstFooter = $doc.Sections($bodyStartIdx).Footers.Item(1)
         $firstFooter.LinkToPrevious = $false
-        [void]$firstFooter.PageNumbers.Add(1)      # wdAlignPageNumberCenter
+        [void]$firstFooter.PageNumbers.Add(2)      # wdAlignPageNumberRight
         $firstFooter.PageNumbers.RestartNumberingAtSection = $true
         $firstFooter.PageNumbers.StartingNumber = 1
 

@@ -4,7 +4,7 @@
   "Title": "理正RTF计算书合并",
   "Description": "将理正深基软件导出的多个RTF计算书按文件名排序合并为一个A3横向Word文档。封面(模板)+目录为单栏，正文为双栏。正文页码从1开始。",
   "Keywords": "理正,RTF,合并,计算书,Word,A3,双栏",
-  "ChangeLog": "v1.2.0 封面模板自动向上搜索目录，适配独立 RTF 文件夹",
+  "ChangeLog": "v1.2.2 抗拔承载力→受拉承载力区间字号设为 10pt",
   "ShareUrl": "",
   "Icon": "fa:Solid_FileWord:#2B579A",
   "Variables": [
