@@ -214,6 +214,30 @@ static void PSWrite(string path, List<string> rtfs, string outPath, string cover
         w.WriteLine("            }");
         w.WriteLine("        }");
         w.WriteLine("        catch { }");
+
+        // font-size fix 2: 土层参数 → 坑内土不加固 → 10pt
+        string ts = "土层参数"; // 土层参数
+        string tc = "坑内土不加固"; // 坑内土不加固
+        w.WriteLine("        try {");
+        w.WriteLine("            $cs2 = $doc.Sections($doc.Sections.Count)");
+        w.WriteLine("            $sr2 = $cs2.Range.Duplicate");
+        w.WriteLine("            $f3 = $sr2.Duplicate");
+        w.WriteLine("            $f3.Find.ClearFormatting()");
+        w.WriteLine("            $f3.Find.Text = \"" + ts + "\"");
+        w.WriteLine("            if ($f3.Find.Execute()) {");
+        w.WriteLine("                $at2 = $f3.End + 1");
+        w.WriteLine("                $f4 = $sr2.Duplicate");
+        w.WriteLine("                $f4.Find.ClearFormatting()");
+        w.WriteLine("                $f4.Find.Text = \"" + tc + "\"");
+        w.WriteLine("                if ($f4.Find.Execute()) {");
+        w.WriteLine("                    $be2 = $f4.Start");
+        w.WriteLine("                    $md2 = $sr2.Duplicate");
+        w.WriteLine("                    $md2.SetRange($at2, $be2)");
+        w.WriteLine("                    $md2.Font.Size = 10");
+        w.WriteLine("                }");
+        w.WriteLine("            }");
+        w.WriteLine("        }");
+        w.WriteLine("        catch { }");
         w.WriteLine("    }");
         w.WriteLine("");
 
