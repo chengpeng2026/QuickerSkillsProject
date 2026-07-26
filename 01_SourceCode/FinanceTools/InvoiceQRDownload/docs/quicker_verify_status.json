@@ -1,0 +1,41 @@
+{
+  "title": "电子发票二维码识别下载",
+  "desc": "选择发票图片 → 自动识别二维码提取链接 → 下载电子发票原件。支持直接下载与浏览器跳转两种模式。",
+  "keywords": "电子发票, 二维码, QR, 识别, 下载, 增值税发票, 全电发票, 财务",
+  "detailEditor": "## 🎯 一句话概括\n\n**扫码即下载** — 选一张电子发票图片，自动识别二维码提取查验链接，智能下载 PDF/OFD 发票原件到指定目录。\n\n---\n\n## ❓ 为什么需要这个动作\n\n电子发票上的二维码扫出来是一个**税务查验平台页面**，不是文件直链。手动流程需要：扫码 → 浏览器打开 → 等加载 → 找隐藏的下载按钮 → 选目录保存。每张发票重复5步。\n\n本动作将流程压缩为 **「选图 → 选目录」两步**，中间全部自动完成。\n\n---\n\n## ✨ 核心特性\n\n- 🔍 **双引擎 QR 解码** — 暴力扫描已加载程序集 + 动态加载 zxing.dll，AutoRotate/TryInverted/TryHarder 全开\n- 🪜 **5 层智能下载策略** — 直链下载 → HTML 解析提取 → WebView2 自动点击 → 已知 API 枚举 → 浏览器手动。层层回退\n- 🛡 **文件安全保护** — 文件头魔数校验（PDF/OFD/JPEG/PNG）、同名自动追加序号不覆盖\n- 🇨🇳 **国内政务环境适配** — SSL 自签名证书信任、GBK/UTF-",
+  "detailTextarea": "## 🎯 一句话概括\n\n**扫码即下载** — 选一张电子发票图片，自动识别二维码提取查验链接，智能下载 PDF/OFD 发票原件到指定目录。\n\n---\n\n## ❓ 为什么需要这个动作\n\n电子发票上的二维码扫出来是一个**税务查验平台页面**，不是文件直链。手动流程需要：扫码 → 浏览器打开 → 等加载 → 找隐藏的下载按钮 → 选目录保存。每张发票重复5步。\n\n本动作将流程压缩为 **「选图 → 选目录」两步**，中间全部自动完成。\n\n---\n\n## ✨ 核心特性\n\n- 🔍 **双引擎 QR 解码** — 暴力扫描已加载程序集 + 动态加载 zxing.dll，AutoRotate/TryInverted/TryHarder 全开\n- 🪜 **5 层智能下载策略** — 直链下载 → HTML 解析提取 → WebView2 自动点击 → 已知 API 枚举 → 浏览器手动。层层回退\n- 🛡 **文件安全保护** — 文件头魔数校验（PDF/OFD/JPEG/PNG）、同名自动追加序号不覆盖\n- 🇨🇳 **国内政务环境适配** — SSL 自签名证书信任、GBK/UTF-",
+  "checkboxes": {
+    "SharedActionVm_Characters_depd_3rdLibs": true,
+    "SharedActionVm_Characters_depd_localResource": false,
+    "SharedActionVm_Characters_depd_browserExtension": false,
+    "SharedActionVm_Characters_func_writeLocalFile": true,
+    "SharedActionVm_Characters_func_changeOrDeleteLocalFile": true,
+    "SharedActionVm_Characters_func_uploadUserData": false
+  },
+  "isPublicTrue": true,
+  "isPublicFalse": false,
+  "tags": {
+    "查询搜索": false,
+    "翻译": false,
+    "文本处理": false,
+    "图片操作": true,
+    "编程相关": false,
+    "AI": false,
+    "剪贴板相关": false,
+    "Windows": false,
+    "文件处理": true,
+    "全局快捷键": false,
+    "网络服务": false,
+    "OCR": true,
+    "资源管理器": false,
+    "组合操作": false,
+    "功能增强": false,
+    "应用内快捷键": false,
+    "功能": false,
+    "脚本": false,
+    "启动": false,
+    "示例": false,
+    "其他": false
+  },
+  "exeFile": "common"
+}

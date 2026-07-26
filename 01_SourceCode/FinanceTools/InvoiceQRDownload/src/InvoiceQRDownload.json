@@ -1,0 +1,79 @@
+﻿{
+  "ActionId": "4a0deeb9-ff9d-4444-b0a4-71f77e0ccfa1",
+  "SharedActionId": "00000000-0000-0000-0000-000000000000",
+  "Title": "电子发票二维码识别下载",
+  "Description": "选择发票图片 → 自动识别二维码提取链接 → 下载电子发票原件。支持直接下载与浏览器跳转两种模式。",
+  "Keywords": "电子发票,二维码,QR,识别,下载,增值税发票,全电发票,财务",
+  "ChangeLog": "v1.0.0 初始化版本。支持双模式识别（文件/截图）、自动下载、浏览器跳转等完整流程。",
+  "ShareUrl": "",
+  "Icon": "fa:Solid_Qrcode:#00A6FF",
+  "Variables": [
+    {
+      "Type": 0,
+      "Key": "imgPath",
+      "DefaultValue": "",
+      "IsInput": true,
+      "Desc": "图片路径（资源管理器选中图片时自动传入）"
+    },
+    {
+      "Type": 0,
+      "Key": "qrResult",
+      "DefaultValue": "",
+      "IsInput": false,
+      "Desc": "识别到的二维码内容"
+    },
+    {
+      "Type": 0,
+      "Key": "savePath",
+      "DefaultValue": "",
+      "IsInput": false,
+      "Desc": "用户选择的保存目录"
+    },
+    {
+      "Type": 0,
+      "Key": "downloadResult",
+      "DefaultValue": "",
+      "IsInput": false,
+      "Desc": "下载结果描述"
+    },
+    {
+      "Type": 0,
+      "Key": "rtn",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "返回值(自动)"
+    },
+    {
+      "Type": 0,
+      "Key": "errMessage",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "错误信息(自动)"
+    },
+    {
+      "Type": 0,
+      "Desc": "结果文本(自动)",
+      "IsOutput": false,
+      "Key": "text"
+    },
+    {
+      "Type": 2,
+      "Desc": "静默启动",
+      "DefaultValue": "true",
+      "IsInput": false,
+      "Key": "silent"
+    },
+    {
+      "Type": 0,
+      "Desc": "菜单参数(自动)",
+      "IsOutput": false,
+      "Key": "menuKey"
+    }
+  ],
+  "References": [
+    "System.Drawing.dll",
+    "System.IO.Compression.dll",
+    "System.IO.Compression.FileSystem.dll",
+    "Microsoft.Web.WebView2.Core.dll"
+  ]
+}

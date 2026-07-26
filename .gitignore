@@ -1,0 +1,19 @@
+# 忽略打包成品
+02_BuildOutput/
+04_ReleaseArchive/
+
+# Quicker 临时缓存
+*.tmp
+*.log
+
+# VSCode 本地配置
+.vscode/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# Quicker 编译产物
+*.quicker
+bin/
+obj/

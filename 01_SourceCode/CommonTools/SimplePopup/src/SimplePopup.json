@@ -1,0 +1,59 @@
+﻿{
+  "ActionId": "2f125c4f-9e40-440a-b221-f8bff969993e",
+  "SharedActionId": "00000000-0000-0000-0000-000000000000",
+  "Title": "简单弹窗",
+  "Description": "一个简单的弹窗提示动作",
+  "Version": "1.0.0",
+  "Author": "",
+  "Keywords": "弹窗,提示,popup,messagebox",
+  "ChangeLog": "v1.0.0 初始化版本",
+  "ShareUrl": "",
+  "Icon": "fa:Solid_Bell:#FFD700",
+  "Variables": [
+    {
+      "Type": 0,
+      "Key": "popup_text",
+      "DefaultValue": "你好，来自 Quicker！",
+      "IsInput": true,
+      "Desc": "弹窗显示的文本内容"
+    },
+    {
+      "Type": 0,
+      "Key": "popup_title",
+      "DefaultValue": "提示",
+      "IsInput": true,
+      "Desc": "弹窗标题"
+    },
+    {
+      "Type": 0,
+      "Desc": "结果文本(自动)",
+      "IsOutput": false,
+      "Key": "text"
+    },
+    {
+      "Type": 0,
+      "Desc": "返回值(自动)",
+      "IsOutput": false,
+      "Key": "rtn"
+    },
+    {
+      "Type": 0,
+      "Desc": "错误信息(自动)",
+      "IsOutput": false,
+      "Key": "errMessage"
+    },
+    {
+      "Type": 0,
+      "Desc": "菜单参数(自动)",
+      "IsOutput": false,
+      "Key": "menuKey"
+    },
+    {
+      "Type": 2,
+      "Desc": "静默启动",
+      "DefaultValue": "true",
+      "IsInput": false,
+      "Key": "silent"
+    }
+  ]
+}

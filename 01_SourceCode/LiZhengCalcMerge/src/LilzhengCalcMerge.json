@@ -1,0 +1,50 @@
+﻿{
+  "ActionId": "6fc230f2-6a72-43f4-b504-39e069bb9148",
+  "SharedActionId": "00000000-0000-0000-0000-000000000000",
+  "Title": "理正基坑计算书合并",
+  "Description": "将文件夹中的理正基坑计算书（RTF格式）合并为一个Word文档，按剖面编号排序",
+  "Keywords": "理正,基坑,计算书,合并,Word,RTF",
+  "ChangeLog": "v5.5.4: 页码重做-封面+正文p1无页码,p3起第X页,删总页码;A3;删除验算项目;10pt",
+  "ShareUrl": "",
+  "Icon": "fa:Solid_FileWord:#2B579A",
+  "Variables": [
+    {
+      "Type": 0,
+      "Desc": "结果文本(自动)",
+      "IsOutput": false,
+      "Key": "text"
+    },
+    {
+      "Type": 0,
+      "Desc": "返回值(自动)",
+      "IsOutput": false,
+      "Key": "rtn"
+    },
+    {
+      "Type": 0,
+      "Desc": "错误信息(自动)",
+      "IsOutput": false,
+      "Key": "errMessage"
+    },
+    {
+      "Type": 0,
+      "Desc": "菜单参数(自动)",
+      "IsOutput": false,
+      "Key": "menuKey"
+    },
+    {
+      "Type": 2,
+      "Desc": "静默启动",
+      "DefaultValue": "true",
+      "IsInput": false,
+      "Key": "silent"
+    },
+    {
+      "Type": 0,
+      "Key": "mergedFileName",
+      "DefaultValue": "",
+      "IsInput": true,
+      "Desc": "合并后的文件名（留空则自动生成时间戳名）"
+    }
+  ]
+}

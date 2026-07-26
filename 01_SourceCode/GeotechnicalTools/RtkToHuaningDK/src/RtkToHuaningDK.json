@@ -1,0 +1,53 @@
+{
+  "ActionId": "4cf86acb-27c9-46b0-8481-228931677d9b",
+  "SharedActionId": "00000000-0000-0000-0000-000000000000",
+  "Title": "RTK测点数据导入华宁DK文件",
+  "Description": "读取RTK设备导出的DAT格式测点数据（点号、X坐标、Y坐标、高程），自动完成数据清洗、格式转换与坐标顺序适配后，追加写入华宁DK文件。自动备份原DK文件，保障工程数据安全。",
+  "Keywords": "RTK,华宁,DK,DAT,测点,岩土,勘察,测绘,数据导入,坐标转换",
+  "ChangeLog": "v1.0.0 初始版本：支持DAT解析、XY坐标互换、DK追加写入、自动备份、批量进度显示",
+  "ShareUrl": "",
+  "Icon": "fa:Solid_MapMarkedAlt:#0080FF",
+  "Variables": [
+    {
+      "Type": 0,
+      "Key": "text",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "结果文本(自动)"
+    },
+    {
+      "Type": 0,
+      "Key": "rtn",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "返回值(自动)"
+    },
+    {
+      "Type": 0,
+      "Key": "errMessage",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "错误信息(自动)"
+    },
+    {
+      "Type": 0,
+      "Key": "menuKey",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "菜单参数(自动)"
+    },
+    {
+      "Type": 2,
+      "Key": "silent",
+      "DefaultValue": "true",
+      "IsInput": false,
+      "Desc": "静默启动"
+    }
+  ],
+  "Menus": {
+    "importToDK": "[fa:Solid_MapMarkedAlt:#0080FF]导入到华宁DK文件"
+  },
+  "References": [
+    "System.Windows.Forms.dll"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "project": "QuickerSkillsProject",
+  "schema_version": "1.0",
+  "last_updated": "2026-07-12T17:50:00+08:00",
+  "actions": {
+    "ObsidianTools/ObsidianInsertDateTime": {
+      "version": "1.1.0",
+      "build_date": "20260712",
+      "status": "stable",
+      "action_id": "15889368-900e-456a-95da-8c5e9e1f34bf",
+      "title": "Obsidian插入当前日期时间",
+      "last_changed": "2026-07-12",
+      "changes": "修复：移除剪贴板换行符，单独模拟 Enter 控制光标换行，避免双换行问题",
+      "dependencies": []
+    },
+    "CommonTools/SimplePopup": {
+      "version": "1.0.0",
+      "build_date": "20260710",
+      "status": "stable",
+      "action_id": "2f125c4f-9e40-440a-b221-f8bff969993e",
+      "title": "简单弹窗",
+      "last_changed": "2026-07-10",
+      "changes": "初始化版本：支持自定义文本和标题的弹窗提示",
+      "dependencies": []
+    },
+    "GeotechnicalTools/RtkToHuaningDK": {
+      "version": "1.0.0",
+      "build_date": "20260715",
+      "status": "stable",
+      "action_id": "4cf86acb-27c9-46b0-8481-228931677d9b",
+      "title": "RTK测点数据导入华宁DK文件",
+      "last_changed": "2026-07-15",
+      "changes": "初始版本：DAT解析、XY坐标互换、DK追加写入、自动备份、进度显示",
+      "dependencies": []
+    }
+  }
+}

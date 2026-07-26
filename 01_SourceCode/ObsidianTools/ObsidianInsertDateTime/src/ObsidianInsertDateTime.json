@@ -1,0 +1,47 @@
+﻿{
+  "ActionId": "15889368-900e-456a-95da-8c5e9e1f34bf",
+  "SharedActionId": "00000000-0000-0000-0000-000000000000",
+  "Title": "Obsidian插入当前日期时间",
+  "Description": "在 Obsidian 笔记编辑状态下，自动在光标处插入当前日期时间（yyyy-MM-dd 星期X HH:mm），选中文本时自动替换，插入后光标自动跳到下一行。",
+  "Version": "1.1.0",
+  "Author": "",
+  "Keywords": "Obsidian;笔记;日期时间;插入;时间戳;Markdown;效率",
+  "ChangeLog": "v1.1.0 新增：插入时间后自动按回车，光标跳到下一行（粘贴文本不带换行，单独模拟 Enter，避免双换行）。v1.0.0 初始版本：支持 Obsidian 窗口校验、光标处插入格式化日期时间、选中文本替换、气泡提示。",
+  "ShareUrl": "",
+  "Icon": "fa:Solid_Calendar_Day:#4A90D9",
+  "Variables": [
+    {
+      "Key": "rtn",
+      "Type": 0,
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "返回值(自动)"
+    },
+    {
+      "Key": "errMessage",
+      "Type": 0,
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "错误信息(自动)"
+    },
+    {
+      "Type": 0,
+      "Desc": "结果文本(自动)",
+      "IsOutput": false,
+      "Key": "text"
+    },
+    {
+      "Type": 0,
+      "Desc": "菜单参数(自动)",
+      "IsOutput": false,
+      "Key": "menuKey"
+    },
+    {
+      "Type": 2,
+      "Desc": "静默启动",
+      "DefaultValue": "true",
+      "IsInput": false,
+      "Key": "silent"
+    }
+  ]
+}
