@@ -12,11 +12,12 @@ using System.Windows.Forms;
 using Quicker.Public;
 
 // ============================================================
-// LiZhengRTFMerge  v1.1.0  Build: 20260726
+// LiZhengRTFMerge  v1.1.1  Build: 20260726
 // 理正深基 RTF 计算书 合并为 A3 横向 Word
 // 封面(模板)+目录 单栏，正文 双栏，页码从正文首页=1
 // Roslyn v2 零样板模式：禁止 namespace/class
 //
+// v1.1.1 修复：WaitForExit 放 ReadToEnd 之后，不阻塞管道导致 Quicker 悬停 15s
 // v1.1.0 修复：PageWidth/PageHeight 替代 PaperSize 枚举，Footers.Item() 替代 Footers()，
 //   InsertBreak 替代 PageBreakBefore 避免 RTF sect 冲突，每个 RTF 插入后立即修正纸张栏数，
 //   硬编码节索引 (cover=1, TOC=2, body=3+) 避免 InsertBreak 后计数错误
@@ -92,12 +93,11 @@ public static string Exec(IStepContext context)
 
             if (process.ExitCode != 0)
             {
-                string errMsg = "PS_EXIT_" + process.ExitCode
-                    + "\n" + psError
-                    + "\n" + psOutput;
+                // 异步 Tick 的 stdout 不可靠 — 不做 ReadToEnd 防止死锁
+                string errMsg = "PS_EXIT_" + process.ExitCode;
                 try { File.Delete(psFile); } catch { }
                 MessageBox.Show(
-                    "Word 合并失败。\n\n" + errMsg,
+                    "Word 合并失败。\n\n错误码: " + errMsg,
                     "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return errMsg;
             }
