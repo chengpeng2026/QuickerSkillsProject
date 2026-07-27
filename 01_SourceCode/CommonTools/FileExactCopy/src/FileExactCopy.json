@@ -1,0 +1,64 @@
+﻿{
+  "ActionId": "97ed2117-1e30-480d-8ce1-0d4e15aca6bd",
+  "SharedActionId": "00000000-0000-0000-0000-000000000000",
+  "Title": "文件精准复制",
+  "Description": "从预设源文件夹中按精确文件名匹配，多选后复制到指定目标文件夹。支持分号分隔多个文件名、同名弹窗确认、自动创建目标目录。",
+  "Version": "1.0.0",
+  "Author": "",
+  "Keywords": "文件,复制,精准,多选,批量,copy,file",
+  "ChangeLog": "v1.0.0 初始化版本",
+  "ShareUrl": "",
+  "Icon": "fa:Solid_Copy:#2196F3",
+  "Variables": [
+    {
+      "Type": 0,
+      "Desc": "结果文本(自动)",
+      "IsOutput": false,
+      "Key": "text"
+    },
+    {
+      "Type": 0,
+      "Desc": "返回值(自动)",
+      "IsOutput": false,
+      "Key": "rtn"
+    },
+    {
+      "Type": 0,
+      "Desc": "错误信息(自动)",
+      "IsOutput": false,
+      "Key": "errMessage"
+    },
+    {
+      "Type": 0,
+      "Desc": "菜单参数(自动)",
+      "IsOutput": false,
+      "Key": "menuKey"
+    },
+    {
+      "Type": 2,
+      "Desc": "静默启动",
+      "DefaultValue": "true",
+      "IsInput": false,
+      "Key": "silent"
+    },
+    {
+      "Type": 0,
+      "Desc": "源文件夹路径",
+      "DefaultValue": "",
+      "IsInput": true,
+      "SaveState": true,
+      "Key": "sourceFolder"
+    },
+    {
+      "Type": 0,
+      "Desc": "精确文件名（多个用分号;分隔）",
+      "DefaultValue": "",
+      "IsInput": true,
+      "SaveState": true,
+      "Key": "fileName"
+    }
+  ],
+  "Menus": {
+    "config": "[fa:Regular_Cog]设置源文件夹和文件名"
+  }
+}
