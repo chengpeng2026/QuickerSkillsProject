@@ -1,5 +1,5 @@
-{
-  "wrench_action_id": "f10c350a-f5cf-4726-543d-08de40f9c963",
+﻿{
+  "wrench_action_id": "0b6ea8ec-6e51-47d8-a921-1eb2471f7b51",
   "quicker_starter_path": "C:\\Program Files\\Quicker\\QuickerStarter.exe",
   "default_build_timeout_ms": 30000,
   "build_script": ".\\skills\\quicker-skill\\scripts\\build.ps1"

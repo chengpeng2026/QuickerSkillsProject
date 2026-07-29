@@ -1,42 +1,50 @@
-# LiZhengRTFMerge v1.1.0 — 理正深基 RTF 计算书合并
+# 理正深基 RTF 计算书合并 — Quicker 动作
 
-## 功能
+将理正深基软件导出的 **多个 RTF 计算书** 按文件名排序合并为一个 **A3 横向 Word 文档** (.docx)。
 
-将理正深基软件导出的**多个 RTF 计算书**按文件名排序合并为一个 **A3 横向 Word 文档** (.docx)。
+## 功能特性
 
-- **封面**：使用模板 `封面.docx`，单栏布局
-- **目录**：自动生成（仅提取一级标题/Heading 1）
-- **正文**：双栏布局 + 栏间分隔线
-- **页码**：封面、目录无页码；正文首页从 1 开始
+- **封面+目录+正文** 三部分，A3 横向 (42cm×29.7cm)
+- 封面（模板）+ 目录 **单栏**，正文 **双栏**
+- 页码从正文首页开始，封面/目录无页码
+- 每个 RTF 文件名自动作为一级标题（Heading 1）
+- 目录自动生成（TOC 域，仅收录 Heading 1）
+- 【抗拔承载力验算结果】→【受拉承载力验算结果】区间字号自动设为 **小五号 (9pt)**
+- 【土层参数】→【坑内土不加固】区间字号自动设为 **10pt**
+- 自动删除"深基坑支护设计"标题信息（含设计单位、设计人、设计时间）
 
-## 输出结构（14 节）
+## 使用方法
+
+1. 在 Quicker 面板点击本动作
+2. 选择包含 RTF 计算书的目录
+3. 选择合并后 Word 文档的保存目录
+4. 输入文件名 → 确认
+5. 等待合并完成（约 1-2 分钟）
+
+## 运行环境
+
+- Windows + Word 2016+ 或 WPS Office（含 VBA 组件）
+- Quicker 客户端（Roslyn v2 运行时）
+- 封面模板 `封面.docx` 需放在 RTF 同级目录或其上级目录
+
+## 输出格式
 
 | 节 | 内容 | 列数 | 页码 |
 |---|---|---|---|
 | S1 | 封面 | 单栏 | 无 |
 | S2 | 目录 | 单栏 | 无 |
-| S3-S14 | 正文 (12 个 RTF) | 双栏+分隔线 | 从 1 开始 |
+| S3-S14 | 正文 (12 个 RTF) | 双栏 | 从 1 开始 |
 
-## 使用场景
+## 技术说明
 
-理正深基生成的计算书为 A3 横向版式，每个文档一个或多个 RTF 文件，出计算方案初稿前批量合并到 Word。
+- PowerShell 子进程操作 Word COM，避免 Roslyn 线程 COM 错误
+- PageWidth/PageHeight 控制 A3 纸张，跨 Word 版本兼容
+- 合并后自动更新 TOC 目录域
 
-## 技术要点
+## 版本
 
-1. **PageWidth/PageHeight 控制纸张** — 不用 PaperSize 枚举（跨 Word 版本不可靠），直接用 `CentimetersToPoints(42.0)` / `(29.7)`
-2. **每个 RTF 独立节** — 文件名作为一级标题（Heading 1），后面插入 RTF 原始内容
-3. **RTF InsertFile 后立即修正** — RTF 自带 Letter 纸张覆盖全局设置，插入后立即用 `Fix-A3Page` 还原
-4. **InsertBreak + 硬编码节索引** — `PageBreakBefore` 与 RTF `\sect` 冲突导致保存失败；改 `InsertBreak(2)` + 按固定偏移追踪节
-5. **PowerShell COM 适配** — `Footers.Item(1)` 替代 `Footers(1)`，`.Style =` 替代 `.set_Style()`
-6. **PowerShell 子进程 Word COM** — 避免 Roslyn 线程创建 Word Object 的经典 `CLSID` 错误
-7. **反向兼容** — 无封面模板时，仅生成目录+正文
+v1.9.0 (2026-07-26)
 
-## 运行依赖
+## 作者
 
-- Windows + Word 2016+ 或 WPS Office（含 VBA 组件）
-- Quicker 客户端（Roslyn v2 运行时）
-- `C:\Users\12089\Desktop\最终计算书\封面.docx` 作为封面模板
-
-## 输出文件
-
-- `合并计算书.docx` — A3 横向，含封面、目录、正文
+chengpeng2026

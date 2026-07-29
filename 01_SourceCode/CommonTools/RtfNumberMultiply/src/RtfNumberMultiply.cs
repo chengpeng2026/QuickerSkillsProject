@@ -2,6 +2,7 @@
 //css_ref System.Drawing.dll
 
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -9,9 +10,10 @@ using System.Windows.Forms;
 using Quicker.Public;
 
 // ============================================================
-// RtfNumberMultiply  v1.0.1  Build: 20260723
-// RTF 中选中数字 ×1.3，结果自动复制到剪贴板
-// 弹窗 2s 后自动关闭
+// RtfNumberMultiply  v2.0.0  Build: 20260729
+// 浮动弹窗常驻 ×1.3 累加器
+// 10 个固定槽位，点「追加」自动复制选中数字并计算
+// 结果顿号分隔 + KN 后缀实时更新剪贴板
 // Roslyn v2 零样板模式：禁止 namespace/class
 // ============================================================
 
@@ -22,23 +24,156 @@ const byte VK_CONTROL = 0x11;
 const byte VK_C = 0x43;
 const uint KEYEVENTF_KEYUP = 0x0002;
 
+// 槽位数据：最多 10 个
+static List<string> slots = new List<string>();
+static List<Label> slotLabels = new List<Label>();
+static List<Button> deleteButtons = new List<Button>();
+static Form popup;
+
 public static string Exec(IStepContext context)
 {
     try
     {
-        // —— 步骤1：清空剪贴板，避免读到旧数据 ——
+        // 初始化 10 个空槽位
+        slots.Clear();
+        for (int i = 0; i < 10; i++) slots.Add(null);
+
+        // 构建浮动弹窗
+        popup = new Form
+        {
+            Text = "RTF 数字乘1.3",
+            Size = new Size(260, 480),
+            StartPosition = FormStartPosition.Manual,
+            Location = new Point(Screen.PrimaryScreen.WorkingArea.Right - 280, 40),
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MaximizeBox = false,
+            MinimizeBox = false,
+            TopMost = true
+        };
+
+        int slotStartY = 10;
+        int slotHeight = 30;
+        int slotSpacing = 4;
+
+        for (int i = 0; i < 10; i++)
+        {
+            int idx = i;
+            int y = slotStartY + idx * (slotHeight + slotSpacing);
+
+            // 序号标签
+            var lblNum = new Label
+            {
+                Text = (idx + 1) + ".",
+                Location = new Point(8, y + 4),
+                Size = new Size(22, 20),
+                TextAlign = ContentAlignment.MiddleRight,
+                Font = new Font("Segoe UI", 9)
+            };
+            popup.Controls.Add(lblNum);
+
+            // 结果标签
+            var lbl = new Label
+            {
+                Text = "",
+                Location = new Point(32, y + 4),
+                Size = new Size(140, 20),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(76, 175, 80)
+            };
+            slotLabels.Add(lbl);
+            popup.Controls.Add(lbl);
+
+            // 删除按钮
+            var btnDel = new Button
+            {
+                Text = "✕",
+                Location = new Point(178, y + 2),
+                Size = new Size(26, 24),
+                FlatStyle = FlatStyle.Flat,
+                Visible = false,
+                BackColor = Color.FromArgb(240, 240, 240),
+                ForeColor = Color.FromArgb(200, 60, 60),
+                Font = new Font("Segoe UI", 8, FontStyle.Bold)
+            };
+            btnDel.FlatAppearance.BorderSize = 0;
+            int captureIdx = idx;
+            btnDel.Click += (s, e) => { DeleteSlot(captureIdx); };
+            deleteButtons.Add(btnDel);
+            popup.Controls.Add(btnDel);
+        }
+
+        // 「追加」按钮
+        var btnAppend = new Button
+        {
+            Text = "追加",
+            Location = new Point(60, slotStartY + 10 * (slotHeight + slotSpacing) + 10),
+            Size = new Size(130, 36),
+            Font = new Font("Segoe UI", 11, FontStyle.Bold),
+            BackColor = Color.FromArgb(76, 175, 80),
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat
+        };
+        btnAppend.FlatAppearance.BorderSize = 0;
+        btnAppend.Click += (s, e) => { AppendSlot(); };
+        popup.Controls.Add(btnAppend);
+
+        // 提示标签
+        var lblHint = new Label
+        {
+            Text = "选中数字后点「追加」",
+            Location = new Point(50, slotStartY + 10 * (slotHeight + slotSpacing) + 50),
+            Size = new Size(160, 16),
+            TextAlign = ContentAlignment.MiddleCenter,
+            Font = new Font("Segoe UI", 7),
+            ForeColor = Color.Gray
+        };
+        popup.Controls.Add(lblHint);
+
+        popup.ShowDialog();
+        return "OK";
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show("执行异常：" + ex.Message,
+            "RTF 数字乘1.3", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return "ERROR: " + ex.Message;
+    }
+}
+
+static void AppendSlot()
+{
+    try
+    {
+        // 1. 找第一个空槽位
+        int targetIdx = -1;
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (string.IsNullOrEmpty(slots[i])) { targetIdx = i; break; }
+        }
+        if (targetIdx < 0)
+        {
+            MessageBox.Show("10 个槽位已满，请先删除一些结果。",
+                "RTF 数字乘1.3", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        // 2. 隐藏弹窗，让焦点回到 WPS
+        popup.Hide();
+        Thread.Sleep(300);
+
+        // 3. 清空剪贴板 + 模拟 Ctrl+C
         Clipboard.Clear();
         Thread.Sleep(60);
 
-        // —— 步骤2：模拟 Ctrl+C 复制选中内容 ——
-        keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);              // Ctrl 按下
-        keybd_event(VK_C, 0, 0, UIntPtr.Zero);                     // C 按下
+        keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
+        keybd_event(VK_C, 0, 0, UIntPtr.Zero);
         Thread.Sleep(50);
-        keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);       // C 松开
-        keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero); // Ctrl 松开
+        keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         Thread.Sleep(150);
 
-        // —— 步骤3：读取剪贴板 ——
+        // 4. 读取剪贴板
         string clipText = string.Empty;
         for (int i = 0; i < 10; i++)
         {
@@ -54,96 +189,74 @@ public static string Exec(IStepContext context)
             Thread.Sleep(50);
         }
 
-        if (string.IsNullOrWhiteSpace(clipText))
-        {
-            MessageBox.Show("未检测到选中内容。\n请在 RTF 中选中一个数字后重试。",
-                "RTF 数字乘1.3", MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-            return "CANCELLED:NO_SELECTION";
-        }
+        // 5. 恢复弹窗
+        popup.Show();
+        popup.TopMost = true;
+        popup.Activate();
 
-        // —— 步骤4：从剪贴板内容中提取数字 ——
-        // 支持中文/英文数字、正负、小数（去掉千分位逗号）
-        string cleaned = clipText.Trim().Replace(",", "").Replace("，", "").Replace(" ", "").Replace(" ", "");
+        // 6. 提取数字
+        if (string.IsNullOrWhiteSpace(clipText)) return; // 静默：不报错，不追加
 
-        // 尝试匹配第一个数字（支持正负号、小数点）
+        string cleaned = clipText.Trim().Replace(",", "").Replace("，", "").Replace(" ", "").Replace("\u00A0", "");
         Match match = Regex.Match(cleaned, @"[-+]?\d+\.?\d*");
-        if (!match.Success)
-        {
-            MessageBox.Show(
-                $"未识别到有效数字。\n\n选中的内容是：\n\"{clipText.Trim()}\"",
-                "RTF 数字乘1.3", MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-            return "CANCELLED:NO_NUMBER";
-        }
+        if (!match.Success) return;
 
-        if (!double.TryParse(match.Value, out double originalValue))
-        {
-            MessageBox.Show($"无法解析数字：{match.Value}",
-                "RTF 数字乘1.3", MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-            return "CANCELLED:PARSE_ERROR";
-        }
+        if (!double.TryParse(match.Value, out double originalValue)) return;
 
-        // —— 步骤5：计算 ×1.3 ——
+        // 7. 计算 ×1.3，保留合理精度
         double result = originalValue * 1.3;
-
-        // 保留合理精度：输入几位小数，结果保留几位（最多6位）
         string originalStr = match.Value;
         int decimals = 0;
         int dotIndex = originalStr.IndexOf('.');
         if (dotIndex >= 0) decimals = originalStr.Length - dotIndex - 1;
         string resultStr = Math.Round(result, Math.Min(decimals + 1, 6)).ToString();
 
-        // —— 步骤6：复制结果到剪贴板 ——
-        Clipboard.SetText(resultStr);
-        Thread.Sleep(50);
-
-        // —— 步骤7：自动关闭弹窗 ——
-        var timer = new System.Windows.Forms.Timer { Interval = 2000 };
-        Form popup = new Form
-        {
-            Text = "RTF 数字乘1.3",
-            Size = new Size(160, 90),
-            StartPosition = FormStartPosition.Manual,
-            // 定位到屏幕右上角
-            Location = new Point(Screen.PrimaryScreen.WorkingArea.Right - 340, 40),
-            FormBorderStyle = FormBorderStyle.FixedDialog,
-            MaximizeBox = false,
-            MinimizeBox = false,
-            TopMost = true
-        };
-        Label lblResult = new Label
-        {
-            Text = resultStr,
-            Font = new Font("Segoe UI", 16, FontStyle.Bold),
-            ForeColor = Color.FromArgb(76, 175, 80),
-            AutoSize = true
-        };
-        Label lblHint = new Label
-        {
-            Text = "已复制到剪贴板 (2s 后自动关闭)",
-            Font = new Font("Segoe UI", 7),
-            ForeColor = Color.Gray,
-            AutoSize = true
-        };
-        popup.Controls.Add(lblResult);
-        popup.Controls.Add(lblHint);
-        popup.Load += (s, e) =>
-        {
-            // 居中排列
-            int totalH = lblResult.Height + lblHint.Height + 6;
-            int startY = (popup.ClientSize.Height - totalH) / 2;
-            lblResult.Location = new Point((popup.ClientSize.Width - lblResult.Width) / 2, startY);
-            lblHint.Location = new Point((popup.ClientSize.Width - lblHint.Width) / 2, startY + lblResult.Height + 6);
-        };
-        timer.Tick += (s, e) => { timer.Stop(); popup.Close(); };
-        timer.Start();
-        popup.ShowDialog();
-
-        return resultStr;
+        // 8. 填入槽位
+        slots[targetIdx] = resultStr;
+        UpdateUI();
+        UpdateClipboard();
     }
     catch (Exception ex)
     {
-        MessageBox.Show($"执行异常：{ex.Message}",
-            "RTF 数字乘1.3", MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
-        return "ERROR: " + ex.Message;
+        try { popup.Show(); popup.TopMost = true; } catch { }
+        MessageBox.Show("追加失败：" + ex.Message,
+            "RTF 数字乘1.3", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
+
+static void DeleteSlot(int idx)
+{
+    slots[idx] = null;
+    UpdateUI();
+    UpdateClipboard();
+}
+
+static void UpdateUI()
+{
+    for (int i = 0; i < 10; i++)
+    {
+        bool hasValue = !string.IsNullOrEmpty(slots[i]);
+        slotLabels[i].Text = hasValue ? (slots[i] + "KN") : "";
+        slotLabels[i].ForeColor = Color.FromArgb(76, 175, 80);
+        deleteButtons[i].Visible = hasValue;
+    }
+}
+
+static void UpdateClipboard()
+{
+    var parts = new List<string>();
+    for (int i = 0; i < slots.Count; i++)
+    {
+        if (!string.IsNullOrEmpty(slots[i]))
+            parts.Add(slots[i] + "KN");
+    }
+    if (parts.Count > 0)
+    {
+        string combined = string.Join("、", parts);
+        Clipboard.SetText(combined);
+    }
+    else
+    {
+        Clipboard.Clear();
     }
 }

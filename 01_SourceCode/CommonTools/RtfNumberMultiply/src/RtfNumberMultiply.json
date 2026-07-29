@@ -2,44 +2,49 @@
   "ActionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "SharedActionId": "00000000-0000-0000-0000-000000000000",
   "Title": "RTF数字乘1.3",
-  "Description": "在RTF中选中数字后触发，自动乘以1.3并复制结果到剪贴板",
-  "Version": "1.0.1",
+  "Description": "浮动弹窗交互式x1.3：WPS选中数字->追加->累加最多10个结果->顿号分隔KN后缀自动复制",
+  "Version": "2.0.0",
   "Author": "",
-  "Keywords": "RTF,乘,1.3,数字,计算,copy,剪贴板",
-  "ChangeLog": "v1.0.1 弹窗自动关闭(2s)；v1.0.0 初始化版本",
+  "Keywords": "RTF,乘,1.3,数字,计算,copy,剪贴板,浮动弹窗,累加",
+  "ChangeLog": "v2.0.0 浮动弹窗常驻交互式；v1.0.1 弹窗自动关闭(2s)；v1.0.0 初始化版本",
   "ShareUrl": "",
   "Icon": "fa:Solid_Calculator:#4CAF50",
+  "References": [ "System.Windows.Forms.dll", "System.Drawing.dll" ],
   "Variables": [
     {
       "Type": 0,
-      "Desc": "结果文本(自动)",
+      "Key": "text",
+      "DefaultValue": "",
       "IsOutput": false,
-      "Key": "text"
+      "Desc": "result text"
     },
     {
       "Type": 0,
-      "Desc": "返回值(自动)",
+      "Key": "rtn",
+      "DefaultValue": "",
       "IsOutput": false,
-      "Key": "rtn"
+      "Desc": "return value"
     },
     {
       "Type": 0,
-      "Desc": "错误信息(自动)",
+      "Key": "errMessage",
+      "DefaultValue": "",
       "IsOutput": false,
-      "Key": "errMessage"
+      "Desc": "error message"
     },
     {
       "Type": 0,
-      "Desc": "菜单参数(自动)",
+      "Key": "menuKey",
+      "DefaultValue": "",
       "IsOutput": false,
-      "Key": "menuKey"
+      "Desc": "menu param"
     },
     {
       "Type": 2,
-      "Desc": "静默启动",
+      "Key": "silent",
       "DefaultValue": "true",
       "IsInput": false,
-      "Key": "silent"
+      "Desc": "silent start"
     }
   ]
 }

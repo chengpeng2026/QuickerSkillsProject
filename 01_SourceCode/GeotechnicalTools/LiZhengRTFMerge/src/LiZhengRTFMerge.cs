@@ -11,8 +11,8 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Quicker.Public;
 
-// LiZhengRTFMerge v1.6.0 Build: 20260726
-// 纯 File.Write 写 PS 文件 — 避免 C# 字符串中文问题
+// LiZhengRTFMerge v1.9.0 Build: 20260726
+// 独立 .ps1 文件方案 — PS 中文不受 C# here-string 限制
 
 public static string Exec(IStepContext context)
 {
@@ -37,16 +37,22 @@ public static string Exec(IStepContext context)
             return "NO_RTF";
         }
 
-        string savePath = null;
-        using (var d = new SaveFileDialog())
+        // —— 步骤2：选择保存目录（FolderBrowserDialog，与 RTF 选择风格一致）——
+        string saveDir = rtfDir;
+        using (var d = new FolderBrowserDialog())
         {
-            d.Title = "保存合并后的 Word 文档";
-            d.Filter = "Word 文档 (*.docx)|*.docx";
-            d.DefaultExt = "docx";
-            d.FileName = "合并计算书.docx";
+            d.Description = "请选择合并后 Word 文档的保存目录";
+            d.SelectedPath = rtfDir;
+            d.ShowNewFolderButton = true;
             if (d.ShowDialog() != DialogResult.OK) return "CANCELLED";
-            savePath = d.FileName;
+            saveDir = d.SelectedPath;
         }
+
+        // —— 步骤3：输入文件名 ——
+        string fileName = ShowInputBox("请输入合并后文件的文件名（不含扩展名）:", "文件名", "合并计算书");
+        if (string.IsNullOrWhiteSpace(fileName)) return "CANCELLED";
+
+        string savePath = Path.Combine(saveDir, fileName.Trim() + ".docx");
 
         string coverPath = null;
         string look = rtfDir;
@@ -112,6 +118,25 @@ static string NaturalSortKey(string f) { return Regex.Replace(f, @"\d+", m => m.
 
 static string EP(string s) { return s.Replace("'", "''"); }
 
+static string ShowInputBox(string prompt, string title, string defaultText)
+{
+    var form = new Form
+    {
+        Width = 400, Height = 160, Text = title,
+        StartPosition = FormStartPosition.CenterScreen,
+        FormBorderStyle = FormBorderStyle.FixedDialog,
+        MaximizeBox = false, MinimizeBox = false
+    };
+    var label = new Label { Left = 15, Top = 15, Width = 360, Text = prompt };
+    var textBox = new TextBox { Left = 15, Top = 40, Width = 350, Text = defaultText };
+    var button = new Button { Text = "确定", Left = 280, Top = 70, Width = 85 };
+    button.Click += (s, e) => { form.DialogResult = DialogResult.OK; form.Close(); };
+    form.Controls.Add(label);
+    form.Controls.Add(textBox);
+    form.Controls.Add(button);
+    return form.ShowDialog() == DialogResult.OK ? textBox.Text : null;
+}
+
 // Write PS file line-by-line — no C# here-string, no Chinese in C# source
 static void PSWrite(string path, List<string> rtfs, string outPath, string cover, bool hasCover)
 {
@@ -167,8 +192,7 @@ static void PSWrite(string path, List<string> rtfs, string outPath, string cover
         w.WriteLine("    $selection.Font.Size = 22");
         w.WriteLine("    $selection.Font.Bold = $true");
         w.WriteLine("    $selection.ParagraphFormat.Alignment = 1");
-        string tocText = "\u76EE  \u5F55"; // 目  录
-        w.WriteLine("    $selection.TypeText(\"" + tocText + "\")");
+        w.WriteLine("    $selection.TypeText(\"" + "\u76EE  \u5F55" + "\")"); // 目  录
         w.WriteLine("    $selection.TypeParagraph()");
         w.WriteLine("    $selection.TypeParagraph()");
         w.WriteLine("    $tocRange = $selection.Range.Duplicate");
@@ -191,9 +215,9 @@ static void PSWrite(string path, List<string> rtfs, string outPath, string cover
         w.WriteLine("        Fix-A3Page $doc.Sections($doc.Sections.Count)");
         w.WriteLine("");
 
-        // font-size fix: Find 抗拔 → 受拉 → set 9pt
-        string tb = "\u6297\u62D4\u627F\u8F7D\u529B\u9A8C\u7B97\u7ED3\u679C"; // 抗拔承载力验算结果
-        string tl = "\u53D7\u62C9\u627F\u8F7D\u529B\u9A8C\u7B97\u7ED3\u679C"; // 受拉承载力验算结果
+        // font-size fix 1: 抗拔 → 受拉 → 9pt (小五)
+        string tb = "\u6297\u62D4\u627F\u8F7D\u529B\u9A8C\u7B97\u7ED3\u679C";
+        string tl = "\u53D7\u62C9\u627F\u8F7D\u529B\u9A8C\u7B97\u7ED3\u679C";
         w.WriteLine("        try {");
         w.WriteLine("            $cs = $doc.Sections($doc.Sections.Count)");
         w.WriteLine("            $sr = $cs.Range.Duplicate");
@@ -216,8 +240,8 @@ static void PSWrite(string path, List<string> rtfs, string outPath, string cover
         w.WriteLine("        catch { }");
 
         // font-size fix 2: 土层参数 → 坑内土不加固 → 10pt
-        string ts = "土层参数"; // 土层参数
-        string tc = "坑内土不加固"; // 坑内土不加固
+        string ts = "\u571F\u5C42\u53C2\u6570";
+        string tc = "\u5751\u5185\u571F\u4E0D\u52A0\u56FA";
         w.WriteLine("        try {");
         w.WriteLine("            $cs2 = $doc.Sections($doc.Sections.Count)");
         w.WriteLine("            $sr2 = $cs2.Range.Duplicate");
@@ -239,6 +263,28 @@ static void PSWrite(string path, List<string> rtfs, string outPath, string cover
         w.WriteLine("        }");
         w.WriteLine("        catch { }");
         w.WriteLine("    }");
+        w.WriteLine("");
+
+        // delete header: 深基坑支护设计 → 设计时间 (with timestamp) — global
+        string dh = "\u6DF1\u57FA\u5751\u652F\u62A4\u8BBE\u8BA1";
+        string dt2 = "\u8BBE\u8BA1\u65F6\u95F4";
+        w.WriteLine("    try {");
+        w.WriteLine("        $f9 = $doc.Range().Duplicate");
+        w.WriteLine("        $f9.Find.ClearFormatting()");
+        w.WriteLine("        $f9.Find.Text = \"" + dh + "\"");
+        w.WriteLine("        if ($f9.Find.Execute()) {");
+        w.WriteLine("            $hdStart = $f9.Start");
+        w.WriteLine("            $f10 = $doc.Range().Duplicate");
+        w.WriteLine("            $f10.Find.ClearFormatting()");
+        w.WriteLine("            $f10.Find.Text = \"" + dt2 + "\"");
+        w.WriteLine("            if ($f10.Find.Execute()) {");
+        w.WriteLine("                $hdEnd = $f10.End");
+        w.WriteLine("                $hdRange = $doc.Range($hdStart, $hdEnd)");
+        w.WriteLine("                [void]$hdRange.Delete()");
+        w.WriteLine("            }");
+        w.WriteLine("        }");
+        w.WriteLine("    }");
+        w.WriteLine("    catch { }");
         w.WriteLine("");
 
         w.WriteLine("    $totalSections = $doc.Sections.Count");
