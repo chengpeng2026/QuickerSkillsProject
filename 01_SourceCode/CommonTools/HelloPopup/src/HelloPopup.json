@@ -1,0 +1,45 @@
+﻿{
+  "ActionId": "",
+  "SharedActionId": "00000000-0000-0000-0000-000000000000",
+  "Title": "HelloPopup",
+  "Description": "弹窗显示你好",
+  "Version": "1.0.0",
+  "Author": "",
+  "Keywords": "你好,弹窗,hello,popup",
+  "ChangeLog": "v1.0.0 初始化版本",
+  "ShareUrl": "",
+  "Icon": "fa:Solid_HandSpock:#0080FF",
+  "Variables": [
+    {
+      "Type": 0,
+      "Desc": "结果文本(自动)",
+      "IsOutput": false,
+      "Key": "text"
+    },
+    {
+      "Type": 0,
+      "Desc": "返回值(自动)",
+      "IsOutput": false,
+      "Key": "rtn"
+    },
+    {
+      "Type": 0,
+      "Desc": "错误信息(自动)",
+      "IsOutput": false,
+      "Key": "errMessage"
+    },
+    {
+      "Type": 0,
+      "Desc": "菜单参数(自动)",
+      "IsOutput": false,
+      "Key": "menuKey"
+    },
+    {
+      "Type": 2,
+      "Desc": "静默启动",
+      "DefaultValue": "true",
+      "IsInput": false,
+      "Key": "silent"
+    }
+  ]
+}
