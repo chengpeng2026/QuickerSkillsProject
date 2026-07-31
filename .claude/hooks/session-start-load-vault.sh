@@ -87,6 +87,23 @@ fi
 echo ""
 echo "下一步: 根据用户任务关键词，搜索 vault 加载 1-3 篇相关笔记。"
 echo "  Grep pattern=\"<keyword>\" path=\"$VAULT_DIR\" glob=\"**/*.md\" output_mode=\"files_with_matches\""
+
+# --- Daily Review Reminder ---
+echo ""
+echo "--- 每日复盘检查 ---"
+YESTERDAY=$(date -d "yesterday" +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d 2>/dev/null)
+if [ -n "$YESTERDAY" ]; then
+  REVIEW_FILE="$VAULT_DIR/Reviews/Daily/$YESTERDAY.md"
+  if [ -f "$REVIEW_FILE" ]; then
+    echo "  ✅ 昨日复盘已完成: Reviews/Daily/$YESTERDAY.md"
+  else
+    echo "  ⚠️  昨日 ($YESTERDAY) 尚未复盘！"
+    echo "     今日任务结束后请运行每日复盘，模板见 [[Claude Code 复盘体系]]"
+  fi
+else
+  echo "  ⚠️  无法计算昨日日期，跳过复盘检查"
+fi
+
 echo "=========================================="
 echo ""
 
