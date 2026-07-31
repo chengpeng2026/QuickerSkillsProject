@@ -1,13 +1,15 @@
 # RtfNumberMultiply 更新日志
 
-## [v2.1.1] - 2026-08-01
-
-### 改进
-- 计算结果固定保留两位小数（`F2`，`Math.Round(result,2).ToString("F2")`）
+## [v2.1.2] - 2026-07-31
 
 ### Bug 修复
-- 确认 `Clipboard.Clear()` 在本环境可用，恢复使用原始剪贴板清空逻辑
-- `UpdateClipboard()` 空结果时用 `Clipboard.Clear()` 代替 `Clipboard.SetText("")`
+- 移除诊断用 MessageBox 代码，恢复静默处理
+- 修复删除按钮 Text 从空字符串改回 `✕`（v2.1.1 整理时遗漏）
+
+## [v2.1.1] - 2026-07-31
+
+### Bug 修复
+- 移除 `Clipboard.Clear()` 调用 — Roslyn v2 沙盒中该方法会触发异常，导致追加工艺被 catch 吞掉，界面无响应。用 `Clipboard.SetText("")` 替代清空操作。
 
 ## [v2.1.0] - 2026-07-31
 

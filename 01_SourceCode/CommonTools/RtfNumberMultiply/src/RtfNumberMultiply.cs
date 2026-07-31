@@ -10,9 +10,9 @@ using System.Windows.Forms;
 using Quicker.Public;
 
 // ============================================================
-// RtfNumberMultiply  v2.1.1  Build: 20260801
-// 浮动弹窗常驻 ×1.3 累加器
-// 10 个固定槽位，点追加自动复制选中数字并计算，F2 两位小数
+// RtfNumberMultiply  v2.1.2  Build: 20260731
+// 浮动弹窗常驻 ﾗ1.3 累加器
+// 10 个固定槽位，点追加自动复制选中数字并计算
 // 结果顿号分隔 + KN 后缀实时更新剪贴板
 // Roslyn v2 零样板模式：禁止 namespace/class
 // ============================================================
@@ -103,7 +103,7 @@ public static string Exec(IStepContext context)
             popup.Controls.Add(btnDel);
         }
 
-        // ｻ追加」按钮
+        // 追加按钮
         var btnAppend = new Button
         {
             Text = "追加",
@@ -121,7 +121,7 @@ public static string Exec(IStepContext context)
         // 提示标签
         var lblHint = new Label
         {
-            Text = "选中数字后点ｻ追加」",
+            Text = "选中数字后点追加",
             Location = new Point(50, slotStartY + 10 * (slotHeight + slotSpacing) + 50),
             Size = new Size(160, 16),
             TextAlign = ContentAlignment.MiddleCenter,
@@ -162,20 +162,17 @@ static void AppendSlot()
         popup.Hide();
         Thread.Sleep(300);
 
-        // 3. 清空剪贴板 + 模拟 Ctrl+C
-        Clipboard.Clear();
-        Thread.Sleep(60);
-
+        // 3. 模拟 Ctrl+C
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
         keybd_event(VK_C, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(50);
+        Thread.Sleep(100);
         keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        Thread.Sleep(150);
+        Thread.Sleep(250);
 
         // 4. 读取剪贴板
         string clipText = string.Empty;
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 15; i++)
         {
             try
             {
@@ -186,7 +183,7 @@ static void AppendSlot()
                 }
             }
             catch { }
-            Thread.Sleep(50);
+            Thread.Sleep(80);
         }
 
         // 5. 恢复弹窗
@@ -195,7 +192,7 @@ static void AppendSlot()
         popup.Activate();
 
         // 6. 提取数字
-        if (string.IsNullOrWhiteSpace(clipText)) return; // 静默：不报错，不追加
+        if (string.IsNullOrWhiteSpace(clipText)) return;
 
         string cleaned = clipText.Trim().Replace(",", "").Replace("，", "").Replace(" ", "").Replace(" ", "");
         Match match = Regex.Match(cleaned, @"[-+]?\d+\.?\d*");
@@ -253,6 +250,7 @@ static void UpdateClipboard()
     }
     else
     {
-        Clipboard.Clear();
+        // 清空剪贴板用 SetText 代替 Clear
+        Clipboard.SetText("");
     }
 }
