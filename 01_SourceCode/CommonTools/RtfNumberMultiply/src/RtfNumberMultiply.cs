@@ -158,7 +158,7 @@ static void AppendSlot()
             return;
         }
 
-        // 2. 模拟 Ctrl+C（不清空剪贴板 — Roslyn v2 沙盒中 Clipboard.Clear() 会异常）
+        // 2. 模拟 Ctrl+C
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
         keybd_event(VK_C, 0, 0, UIntPtr.Zero);
         Thread.Sleep(50);
@@ -166,7 +166,7 @@ static void AppendSlot()
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         Thread.Sleep(200);
 
-        // 3. 读取剪贴板（多次重试）
+        // 3. 读取剪贴板
         string clipText = string.Empty;
         for (int i = 0; i < 20; i++)
         {
