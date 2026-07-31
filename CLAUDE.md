@@ -117,3 +117,4 @@ Vault 采用 **领域文件夹 + 根目录 MOC** 结构：
 - **知识扫描**：每个 todo list 最后一项固定为「📝 知识扫描：本次有值得写入 Obsidian 的吗？」——标记 completed 前必须回答
 - **写入验证**：knowledge-capture 写入文件后，立即用 Read 回读确认内容完整（至少包含 frontmatter + H1 标题 + 一段正文），确认 MOC wikilink 已追加
 - **写入知识**：调用 knowledge-capture skill 写入 Obsidian，更新 MOC + 交叉引用
+- **工作区整洁**：任务结束后确认 `git status` 干净。新产生的文件及时分类提交，禁止累积大量 untracked/staged 文件到下次任务。`temp/` 目录仅限临时调试，任务结束前必须清理
