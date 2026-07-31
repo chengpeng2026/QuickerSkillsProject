@@ -158,17 +158,21 @@ static void AppendSlot()
             return;
         }
 
-        // 2. 模拟 Ctrl+C
+        // 2. 隐藏弹窗，让焦点回到 WPS
+        popup.Hide();
+        Thread.Sleep(300);
+
+        // 3. 模拟 Ctrl+C
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
         keybd_event(VK_C, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(50);
+        Thread.Sleep(100);
         keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        Thread.Sleep(200);
+        Thread.Sleep(250);
 
-        // 3. 读取剪贴板
+        // 4. 读取剪贴板
         string clipText = string.Empty;
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 15; i++)
         {
             try
             {
@@ -182,7 +186,12 @@ static void AppendSlot()
             Thread.Sleep(80);
         }
 
-        // 4. 提取数字
+        // 5. 恢复弹窗
+        popup.Show();
+        popup.TopMost = true;
+        popup.Activate();
+
+        // 6. 提取数字
         if (string.IsNullOrWhiteSpace(clipText)) return;
 
         string cleaned = clipText.Trim().Replace(",", "").Replace("，", "").Replace(" ", "").Replace(" ", "");
@@ -191,19 +200,18 @@ static void AppendSlot()
 
         if (!double.TryParse(match.Value, out double originalValue)) return;
 
-        // 5. 计算 ×1.3，保留两位小数
+        // 7. 计算 ×1.3，保留两位小数
         double result = originalValue * 1.3;
         string resultStr = Math.Round(result, 2).ToString("F2");
 
-        // 6. 填入槽位
+        // 8. 填入槽位
         slots[targetIdx] = resultStr;
-        popup.BeginInvoke((Action)(() => {
-            UpdateUI();
-            UpdateClipboard();
-        }));
+        UpdateUI();
+        UpdateClipboard();
     }
     catch (Exception ex)
     {
+        try { popup.Show(); popup.TopMost = true; } catch { }
         MessageBox.Show("追加失败：" + ex.Message,
             "RTF 数字乘1.3", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
