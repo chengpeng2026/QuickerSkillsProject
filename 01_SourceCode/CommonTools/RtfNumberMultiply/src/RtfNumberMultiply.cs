@@ -10,9 +10,9 @@ using System.Windows.Forms;
 using Quicker.Public;
 
 // ============================================================
-// RtfNumberMultiply  v2.2.0  Build: 20260731
+// RtfNumberMultiply  v2.1.2  Build: 20260731
 // 浮动弹窗常驻 ﾗ1.3 累加器
-// 10 个固定槽位，空格键触发追加，窗口不隐藏
+// 10 个固定槽位，点追加自动复制选中数字并计算
 // 结果顿号分隔 + KN 后缀实时更新剪贴板
 // Roslyn v2 零样板模式：禁止 namespace/class
 // ============================================================
@@ -42,14 +42,13 @@ public static string Exec(IStepContext context)
         popup = new Form
         {
             Text = "RTF 数字乘1.3",
-            Size = new Size(260, 430),
+            Size = new Size(260, 480),
             StartPosition = FormStartPosition.Manual,
             Location = new Point(Screen.PrimaryScreen.WorkingArea.Right - 280, 40),
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MaximizeBox = false,
             MinimizeBox = false,
-            TopMost = true,
-            KeyPreview = true
+            TopMost = true
         };
 
         int slotStartY = 10;
@@ -104,28 +103,32 @@ public static string Exec(IStepContext context)
             popup.Controls.Add(btnDel);
         }
 
+        // 追加按钮
+        var btnAppend = new Button
+        {
+            Text = "追加",
+            Location = new Point(60, slotStartY + 10 * (slotHeight + slotSpacing) + 10),
+            Size = new Size(130, 36),
+            Font = new Font("Segoe UI", 11, FontStyle.Bold),
+            BackColor = Color.FromArgb(76, 175, 80),
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat
+        };
+        btnAppend.FlatAppearance.BorderSize = 0;
+        btnAppend.Click += (s, e) => { AppendSlot(); };
+        popup.Controls.Add(btnAppend);
+
         // 提示标签
-        int hintY = slotStartY + 10 * (slotHeight + slotSpacing) + 10;
         var lblHint = new Label
         {
-            Text = "WPS 选中数字 → 回到此处按 空格",
-            Location = new Point(20, hintY),
-            Size = new Size(220, 30),
+            Text = "选中数字后点追加",
+            Location = new Point(50, slotStartY + 10 * (slotHeight + slotSpacing) + 50),
+            Size = new Size(160, 16),
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI", 9),
-            ForeColor = Color.FromArgb(76, 175, 80)
+            Font = new Font("Segoe UI", 7),
+            ForeColor = Color.Gray
         };
         popup.Controls.Add(lblHint);
-
-        // 空格键触发追加
-        popup.KeyDown += (s, e) => {
-            if (e.KeyCode == Keys.Space)
-            {
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-                AppendSlot();
-            }
-        };
 
         popup.ShowDialog();
         return "OK";
@@ -155,15 +158,19 @@ static void AppendSlot()
             return;
         }
 
-        // 2. 模拟 Ctrl+C（窗口不隐藏，keybd_event 不依赖焦点）
+        // 2. 隐藏弹窗，让焦点回到 WPS
+        popup.Hide();
+        Thread.Sleep(300);
+
+        // 3. 模拟 Ctrl+C
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
         keybd_event(VK_C, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(80);
+        Thread.Sleep(100);
         keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        Thread.Sleep(200);
+        Thread.Sleep(250);
 
-        // 3. 读取剪贴板
+        // 4. 读取剪贴板
         string clipText = string.Empty;
         for (int i = 0; i < 15; i++)
         {
@@ -179,7 +186,12 @@ static void AppendSlot()
             Thread.Sleep(80);
         }
 
-        // 4. 提取数字
+        // 5. 恢复弹窗
+        popup.Show();
+        popup.TopMost = true;
+        popup.Activate();
+
+        // 6. 提取数字
         if (string.IsNullOrWhiteSpace(clipText)) return;
 
         string cleaned = clipText.Trim().Replace(",", "").Replace("，", "").Replace(" ", "").Replace(" ", "");
@@ -188,17 +200,18 @@ static void AppendSlot()
 
         if (!double.TryParse(match.Value, out double originalValue)) return;
 
-        // 5. 计算 ×1.3，保留两位小数
+        // 7. 计算 ×1.3，保留两位小数
         double result = originalValue * 1.3;
         string resultStr = Math.Round(result, 2).ToString("F2");
 
-        // 6. 填入槽位
+        // 8. 填入槽位
         slots[targetIdx] = resultStr;
         UpdateUI();
         UpdateClipboard();
     }
     catch (Exception ex)
     {
+        try { popup.Show(); popup.TopMost = true; } catch { }
         MessageBox.Show("追加失败：" + ex.Message,
             "RTF 数字乘1.3", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
@@ -237,6 +250,7 @@ static void UpdateClipboard()
     }
     else
     {
+        // 清空剪贴板用 SetText 代替 Clear
         Clipboard.SetText("");
     }
 }
