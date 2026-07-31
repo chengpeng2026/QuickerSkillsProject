@@ -162,17 +162,20 @@ static void AppendSlot()
         popup.Hide();
         Thread.Sleep(300);
 
-        // 3. 模拟 Ctrl+C（不清空剪贴板，避免 Roslyn v2 沙盒异常）
+        // 3. 清空剪贴板 + 模拟 Ctrl+C
+        Clipboard.Clear();
+        Thread.Sleep(60);
+
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
         keybd_event(VK_C, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(100);
+        Thread.Sleep(50);
         keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        Thread.Sleep(250);
+        Thread.Sleep(150);
 
         // 4. 读取剪贴板
         string clipText = string.Empty;
-        for (int i = 0; i < 15; i++)
+        for (int i = 0; i < 10; i++)
         {
             try
             {
@@ -183,7 +186,7 @@ static void AppendSlot()
                 }
             }
             catch { }
-            Thread.Sleep(80);
+            Thread.Sleep(50);
         }
 
         // 5. 恢复弹窗
@@ -192,7 +195,7 @@ static void AppendSlot()
         popup.Activate();
 
         // 6. 提取数字
-        if (string.IsNullOrWhiteSpace(clipText)) return;
+        if (string.IsNullOrWhiteSpace(clipText)) return; // 静默：不报错，不追加
 
         string cleaned = clipText.Trim().Replace(",", "").Replace("，", "").Replace(" ", "").Replace(" ", "");
         Match match = Regex.Match(cleaned, @"[-+]?\d+\.?\d*");
@@ -250,6 +253,6 @@ static void UpdateClipboard()
     }
     else
     {
-        Clipboard.SetText("");
+        Clipboard.Clear();
     }
 }
