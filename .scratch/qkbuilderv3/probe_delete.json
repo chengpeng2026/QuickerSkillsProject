@@ -1,0 +1,9 @@
+{
+  "ActionId": "",
+  "SharedActionId": "00000000-0000-0000-0000-000000000000",
+  "Title": "API探测-删除方法",
+  "Description": "探测 ActionItem2Store 的删除方法",
+  "Version": "1.0.0",
+  "Icon": "fa:Solid_MagnifyingGlass:#FF9800",
+  "Variables": []
+}

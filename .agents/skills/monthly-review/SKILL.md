@@ -1,0 +1,142 @@
+---
+name: monthly-review
+description: Generate a monthly retrospective from daily and weekly reviews — macro trends, knowledge base health, process bottlenecks, skill growth, and next month's goals. Use when user says "monthly review", "月报", "月度复盘", "月度总结".
+---
+
+# Monthly Review
+
+汇总本月所有日/周复盘，生成宏观月度报告。
+
+## 前置条件
+
+- Obsidian vault 中存在 `Reviews/Daily/` 和 `Reviews/Weekly/` 目录
+- 至少有 1 篇本月日报或周报
+
+## 流程
+
+### Step 1: 确定本月日期范围
+
+```powershell
+$today = Get-Date
+$firstDay = Get-Date -Year $today.Year -Month $today.Month -Day 1
+$lastDay = $firstDay.AddMonths(1).AddDays(-1)
+Write-Output "本月: $($firstDay.ToString('yyyy-MM-dd')) ~ $($lastDay.ToString('yyyy-MM-dd'))"
+```
+
+### Step 2: 加载本月全部日报和周报
+
+```bash
+# 日报
+ls "E:/Aiku2026/Reviews/Daily/$(date +%Y-%m)*.md"
+
+# 周报
+ls "E:/Aiku2026/Reviews/Weekly/"
+```
+
+### Step 3: 五项指标汇总
+
+| 指标 | 计算方式 |
+|------|---------|
+| 总任务数 | 所有日报「完成的任务」表格行数 |
+| 完成动作数 | 日报/周报中提及的动作发布/版本发布次数 |
+| vault 笔记数 | `ls E:/Aiku2026/**/*.md | wc -l` 当前值；从 `Obsidian Vault 改进日志` 获取月初值 |
+| memory 条目数 | `ls memory/*.md | wc -l` |
+| 踩坑总数 | 所有日报「踩坑记录」非空条数 |
+
+以上用 PowerShell 统计。
+
+### Step 4: 知识库健康检查
+
+- **MOC 索引完整性**：抽查 3 条 MOC wikilink，用 `Grep` 确认目标文件存在
+- **死链检查**：`Grep` 搜索 `[[待积累]]` 标记——这表明知识缺口
+- **孤岛笔记**：`Grep` 搜索哪些笔记没被任何其他笔记引用
+- **过时笔记**：检查 `created:` 日期距今 > 3 个月的笔记，是否需要更新
+
+### Step 5: 本月高光与低谷
+
+从周报的「重复问题」和日报的「关键决策」中提炼：
+
+- **高光**：完成的里程碑、学到的关键技能、高效任务
+- **低谷**：反复出现的问题、阻塞、返工
+
+### Step 6: 流程瓶颈分析
+
+回顾本月所有「踩坑记录」：
+
+- 最耗时的环节是什么？（编译？调试？搜索？等待？）
+- 有没有可以自动化的步骤？
+- Claude Code 配置是否需要调整？
+
+### Step 7: 技能增长评估
+
+对比月初和月末的 vault 避坑笔记：
+
+- 新掌握的 Quicker 平台知识
+- 仍薄弱的领域
+- 下月学习目标
+
+### Step 8: 生成月报复盘
+
+写入 `E:\Aiku2026\Reviews\Monthly\YYYY-MM.md`：
+
+```markdown
+---
+tags: [monthly-review]
+created: YYYY-MM-DD
+review_period: YYYY-MM
+---
+
+# YYYY年MM月 月度复盘
+
+## 月度指标
+| 指标 | 数值 | 环比 |
+|------|------|------|
+| 总任务数 | ? | — |
+| 完成动作数 | ? | — |
+| vault 笔记数 | ? (月初: ?) | +? |
+| memory 条目数 | ? | — |
+| 踩坑次数 | ? | — |
+
+## 本月高光
+- ...
+
+## 本月低谷 / 卡点
+- ...
+
+## 知识库健康检查
+- [ ] MOC 索引完整（抽查 3 条通过）
+- [ ] 死链检查：[[待积累]] 条目 = ? 个
+- [ ] 孤岛笔记：? 篇未被引用
+- [ ] 过时笔记（>3月未更新）：? 篇需审查
+- [ ] `Reviews/` 目录结构完整
+
+## 流程瓶颈与改进
+| 瓶颈 | 影响 | 改进方案 |
+|------|------|---------|
+
+## 技能增长
+- 新掌握：...
+- 仍薄弱：...
+- 下月目标：[ ] ...
+
+## 下月重点
+- [ ] ...
+
+## 相关笔记
+- [[Claude Code 复盘体系]]
+- [[Reviews/Reviews MOC]]
+```
+
+### Step 9: 更新 Reviews MOC
+
+在 `Reviews/Reviews MOC.md` 的「月度复盘」区域追加新条目。
+
+### Step 10: 汇报给用户
+
+输出指标摘要 + 最多 3 条关键发现，详细内容在月报文件中。
+
+## 边界
+
+- 这是**首次月度复盘**的模板——后续月份可与上月对比（环比数据）
+- 如果本月日报 < 5 篇，标注"数据稀疏，结论置信度低"
+- `[[待积累]]` 条目不是 bug，是知识库自然生长过程——只计数，不报警
