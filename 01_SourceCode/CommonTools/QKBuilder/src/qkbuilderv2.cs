@@ -7,9 +7,9 @@ using System.Windows;
 using Quicker.Public;
 
 // ============================================================
-// QKBuilder  v2.0.0  2026-07-29
+// QKBuilder  v2.1.0  2026-07-31
 // Quicker 2.1.0 自动构建扳手 — ActionItem2Store API
-// 支持 action=build | update | read | publish | copycode
+// 支持 action=build | update | read | publish | copycode | delete
 // 内嵌代码，无模板依赖。手工编辑不导出导入，ID 稳定: 0b6ea8ec
 // Roslyn v2 零样板模式
 // ============================================================
@@ -21,12 +21,13 @@ public static string Exec(IStepContext context)
         string param = context.GetVarValue("quicker_in_param") as string ?? "";
         if (string.IsNullOrEmpty(param))
         {
-            string usage = "QKBuilder v2.0.0\n\n" +
+            string usage = "QKBuilder v2.1.0\n\n" +
                 "build    构建/更新动作\n" +
                 "update   更新简介（_简介.md）\n" +
                 "read     读取动作信息\n" +
                 "publish  发布到共享平台\n" +
-                "copycode 修复壳动作模板引用\n\n" +
+                "copycode 修复壳动作模板引用\n" +
+                "delete   删除动作\n\n" +
                 "build.ps1 -JsonPath <JSON绝对路径>";
             Msg(usage);
             return "OK";
@@ -50,6 +51,7 @@ public static string Exec(IStepContext context)
         if (action == "read")      return DoRead(filePath);
         if (action == "publish")   return DoPublish(filePath);
         if (action == "copycode")  return DoCopyCode(asms, filePath);
+        if (action == "delete")    return DoDelete(asms, filePath);
 
         return "ERR:Unknown action: " + action;
     }
@@ -220,6 +222,81 @@ static string DoCopyCode(Assembly[] asms, string filePath)
     addM.Invoke(store, new[] { shellItem });
 
     return "OK:copycode:" + shellId;
+}
+
+// ==================== DELETE ====================
+
+static string DoDelete(Assembly[] asms, string filePath)
+{
+    if (!File.Exists(filePath)) return "ERR:JSON not found";
+    string json = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+    string targetId = J(json, "ActionId");
+    if (string.IsNullOrEmpty(targetId)) return "ERR:No ActionId in JSON";
+
+    Type storeType = T(asms, "Quicker.Domain.Services.ActionItem2Store");
+    if (storeType == null) return "ERR:ActionItem2Store not found";
+    Type item2Type = T(asms, "Quicker.Common.V2.ActionItem2");
+    if (item2Type == null) return "ERR:ActionItem2 not found";
+
+    object store = FindStore(asms, storeType);
+    if (store == null) return "ERR:Store not found";
+
+    // 获取 ActionItem2（验证存在）
+    var getById = storeType.GetMethod("GetActionById",
+        BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance);
+    if (getById == null) return "ERR:GetActionById not found";
+
+    object result = getById.Invoke(store, new object[] { targetId });
+    if (result == null) return "ERR:Action not found: " + targetId;
+
+    // 提取 ActionItem2
+    object shellItem = null;
+    Type rt = result.GetType();
+    if (rt.Name.Contains("Tuple") || rt.Name.Contains("ValueTuple"))
+        shellItem = rt.GetProperty("Item2")?.GetValue(result);
+    else if (item2Type.IsAssignableFrom(rt))
+        shellItem = result;
+    if (shellItem == null) return "ERR:Cannot extract ActionItem2";
+
+    string title = "?";
+    try { title = item2Type.GetProperty("Presentation")?.GetValue(shellItem)?.ToString() ?? "?"; } catch { }
+
+    // 多候选方法名探测删除方法
+    string[] candidates = { "DeleteAction", "RemoveAction", "Delete", "Remove" };
+    MethodInfo delMethod = null;
+    object[] delArgs = null;
+
+    foreach (var name in candidates)
+    {
+        // 尝试签名为 (Guid id) 或 (string id) 或 (ActionItem2 item)
+        foreach (var m in storeType.GetMethods(BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance))
+        {
+            if (!m.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) continue;
+            var ps = m.GetParameters();
+            if (ps.Length == 1)
+            {
+                if (ps[0].ParameterType == typeof(Guid))
+                    { delMethod = m; delArgs = new object[] { Guid.Parse(targetId) }; break; }
+                if (ps[0].ParameterType == typeof(string))
+                    { delMethod = m; delArgs = new object[] { targetId }; break; }
+                if (item2Type.IsAssignableFrom(ps[0].ParameterType))
+                    { delMethod = m; delArgs = new object[] { shellItem }; break; }
+            }
+        }
+        if (delMethod != null) break;
+    }
+
+    if (delMethod == null) return "ERR:Delete method not found — tried: " + string.Join(", ", candidates);
+
+    try
+    {
+        delMethod.Invoke(store, delArgs);
+        return "OK:deleted:" + targetId + " | " + title;
+    }
+    catch (Exception ex)
+    {
+        return "ERR:Delete failed: " + ex.GetType().Name + ": " + ex.Message;
+    }
 }
 
 // ==================== Helpers ====================

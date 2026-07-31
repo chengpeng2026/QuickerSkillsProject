@@ -1,9 +1,9 @@
 {
   "ActionId": "0b6ea8ec-6e51-47d8-a921-1eb2471f7b51",
   "Title": "QK扳手",
-  "Description": "AI全自动构建Quicker动作(V2+V3统一版)。ActionItem2Store API + 5个action(build/update/read/publish/copycode)，内嵌代码无模板依赖，搭配claude-code + quicker-skill使用。",
-  "Keywords": "build,扳手,wrench,quicker-skill,构建,AI,自动",
-  "ChangeLog": "v2.0.0 统一版: ActionItem2Store API + 5个action(build/update/read/publish/copycode) + 内嵌代码无模板依赖",
+  "Description": "AI全自动构建Quicker动作(V2统一版)。ActionItem2Store API + 6个action(build/update/read/publish/copycode/delete)，内嵌代码无模板依赖，搭配claude-code + quicker-skill使用。",
+  "Keywords": "build,扳手,wrench,quicker-skill,构建,AI,自动,delete,删除",
+  "ChangeLog": "v2.1.0 新增 delete action；v2.0.0 统一版: ActionItem2Store API + 5个action + 内嵌代码无模板依赖",
   "ShareUrl": "",
   "Icon": "https://files.getquicker.net/_icons/9F3EB1605ACC599052676CF73ECF5C9D3C85B67A.png",
   "Variables": [
