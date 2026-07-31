@@ -1,0 +1,65 @@
+﻿{
+  "ActionId": "c5a2b06d-0664-4cb7-914a-a699b66cc519",
+  "SharedActionId": "00000000-0000-0000-0000-000000000000",
+  "Title": "微信→Edge打开",
+  "Description": "微信PC内置浏览器一键提取URL并用Edge打开。支持PC微信/企业微信/微信多开，输入法干扰保护，自动重试。",
+  "Keywords": "微信,WeChat,Edge,浏览器,URL,提取,打开",
+  "ChangeLog": "v1.0.0 初始化：窗口识别+快捷键复制+URL校验+Edge启动+输入法保护",
+  "ShareUrl": "",
+  "Icon": "fa:Solid_ExternalLinkAlt:#2F80ED",
+  "Variables": [
+    {
+      "Type": 0,
+      "Key": "incognito",
+      "DefaultValue": "false",
+      "IsInput": true,
+      "Desc": "Edge 无痕模式：填 true 启用 InPrivate 窗口"
+    },
+    {
+      "Type": 0,
+      "Key": "retryCount",
+      "DefaultValue": "3",
+      "IsInput": true,
+      "Desc": "最大重试次数：默认 3"
+    },
+    {
+      "Type": 0,
+      "Key": "rtn",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "返回值(自动)"
+    },
+    {
+      "Type": 0,
+      "Key": "errMessage",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "错误信息(自动)"
+    },
+    {
+      "Type": 0,
+      "Key": "text",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "结果文本(自动)"
+    },
+    {
+      "Type": 0,
+      "Key": "menuKey",
+      "DefaultValue": "",
+      "IsOutput": false,
+      "Desc": "菜单参数(自动)"
+    },
+    {
+      "Type": 2,
+      "Key": "silent",
+      "DefaultValue": "true",
+      "IsInput": false,
+      "Desc": "静默启动"
+    }
+  ],
+  "References": [
+    "System.Windows.Forms.dll",
+    "System.Drawing.dll"
+  ]
+}
