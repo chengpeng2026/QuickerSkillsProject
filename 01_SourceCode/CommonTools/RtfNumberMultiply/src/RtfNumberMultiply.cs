@@ -158,21 +158,17 @@ static void AppendSlot()
             return;
         }
 
-        // 2. 隐藏弹窗，让焦点回到 WPS
-        popup.Hide();
-        Thread.Sleep(300);
-
-        // 3. 模拟 Ctrl+C
+        // 2. 模拟 Ctrl+C（不清空剪贴板 — Roslyn v2 沙盒中 Clipboard.Clear() 会异常）
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
         keybd_event(VK_C, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(100);
+        Thread.Sleep(50);
         keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        Thread.Sleep(250);
+        Thread.Sleep(200);
 
-        // 4. 读取剪贴板
+        // 3. 读取剪贴板（多次重试）
         string clipText = string.Empty;
-        for (int i = 0; i < 15; i++)
+        for (int i = 0; i < 20; i++)
         {
             try
             {
@@ -186,12 +182,7 @@ static void AppendSlot()
             Thread.Sleep(80);
         }
 
-        // 5. 恢复弹窗
-        popup.Show();
-        popup.TopMost = true;
-        popup.Activate();
-
-        // 6. 提取数字
+        // 4. 提取数字
         if (string.IsNullOrWhiteSpace(clipText)) return;
 
         string cleaned = clipText.Trim().Replace(",", "").Replace("，", "").Replace(" ", "").Replace(" ", "");
@@ -200,18 +191,19 @@ static void AppendSlot()
 
         if (!double.TryParse(match.Value, out double originalValue)) return;
 
-        // 7. 计算 ×1.3，保留两位小数
+        // 5. 计算 ×1.3，保留两位小数
         double result = originalValue * 1.3;
         string resultStr = Math.Round(result, 2).ToString("F2");
 
-        // 8. 填入槽位
+        // 6. 填入槽位
         slots[targetIdx] = resultStr;
-        UpdateUI();
-        UpdateClipboard();
+        popup.BeginInvoke((Action)(() => {
+            UpdateUI();
+            UpdateClipboard();
+        }));
     }
     catch (Exception ex)
     {
-        try { popup.Show(); popup.TopMost = true; } catch { }
         MessageBox.Show("追加失败：" + ex.Message,
             "RTF 数字乘1.3", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
