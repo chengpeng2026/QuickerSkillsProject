@@ -107,6 +107,9 @@ Vault 采用 **领域文件夹 + 根目录 MOC** 结构：
 - 含中文的 .cs 文件必须 UTF-8 with BOM
 - 每次修改动作代码后必须 build 导入验证
 - 版本号变更必须同步更新 `docs/CHANGELOG.md`
+- **禁止 MessageBox 诊断**：Quicker 动作 Sandbox 中 MessageBox 泵送消息队列会改变 UI 线程时序，导致误判（诊断通过→移除→问题复现）。诊断用写桌面 txt 替代。
+- **修改任何 Quicker 动作 .cs 文件前**，必须先执行：加载 quicker-skill → 读取 memory `quicker-before-modification-check` → git log 基线 → 确认当前版本已测试通过 → 如果是修 Bug 收集 3 个数字（输入/期望/实际）。跳过任何一步 = 禁止改代码。
+- **每次收到 Quicker 动作 Bug 报告时**，先搜索 vault 加载 [[RtfNumberMultiply 8-1 流程复盘]] 和 [[与 Claude Code 协作防翻车完全指南]]，执行诊断流程（复述→列选项→单变量→3次上限）
 
 ## 会话约定
 

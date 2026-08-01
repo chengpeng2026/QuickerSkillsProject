@@ -17,3 +17,7 @@ Thumbs.db
 *.quicker
 bin/
 obj/
+
+# 临时工作区（.scratch/ 已追踪，保留版本控制）
+temp/
+wechat-article-catcher/
