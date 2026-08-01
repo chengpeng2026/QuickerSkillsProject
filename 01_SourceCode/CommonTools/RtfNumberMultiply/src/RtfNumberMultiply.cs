@@ -10,17 +10,24 @@ using System.Windows.Forms;
 using Quicker.Public;
 
 // ============================================================
-// RtfNumberMultiply  v2.1.4  Build: 20260801
+// RtfNumberMultiply  v2.1.5  Build: 20260802
 // 浮动弹窗常驻 ﾗ1.3 累加器
 // 10 个固定槽位，点追加自动复制选中数字并计算
 // 结果顿号分隔 + KN 后缀实时更新剪贴板
 // v2.1.3: 弹窗加宽，追加旁新增「清除」按钮（确认框+同步清空剪贴板）
 // v2.1.4: 修复 SetText("") 在沙盒抛异常 → 多级兜底清空剪贴板
+// v2.1.5: 修复追加无结果bug → 焦点检测确认WPS前台再Ctrl+C
 // Roslyn v2 零样板模式：禁止 namespace/class
 // ============================================================
 
 [System.Runtime.InteropServices.DllImport("user32.dll")]
 static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+static extern IntPtr GetForegroundWindow();
+
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int count);
 
 const byte VK_CONTROL = 0x11;
 const byte VK_C = 0x43;
@@ -177,7 +184,23 @@ static void AppendSlot()
 
         // 2. 隐藏弹窗，让焦点回到 WPS
         popup.Hide();
-        Thread.Sleep(300);
+        Thread.Sleep(150); // 先等弹窗隐藏完成
+
+        // 轮询等待前台窗口回到 WPS/Word（最多 2 秒），确保Ctrl+C命中正确窗口
+        bool focused = false;
+        for (int wait = 0; wait < 40; wait++)
+        {
+            IntPtr fg = GetForegroundWindow();
+            var sb = new System.Text.StringBuilder(256);
+            GetWindowText(fg, sb, 256);
+            string fgTitle = sb.ToString();
+            if (fgTitle.Contains("WPS") || fgTitle.Contains("Word") || fgTitle.Contains("Microsoft"))
+            {
+                focused = true;
+                break;
+            }
+            Thread.Sleep(50);
+        }
 
         // 3. 模拟 Ctrl+C
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
