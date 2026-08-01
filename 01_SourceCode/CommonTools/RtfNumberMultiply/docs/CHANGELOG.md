@@ -1,5 +1,20 @@
 # RtfNumberMultiply 更新日志
 
+## [v2.1.4] - 2026-08-01
+
+### Bug 修复
+- 修复「清除」后弹「清空失败: Value cannot be null. (Parameter 'text')」错误框：`Clipboard.SetText("")`（空字符串）在 Roslyn v2 沙盒抛 `ArgumentNullException`
+- **多级兜底清空**：先试 `Clipboard.SetText("")`，失败则回退到 PowerShell 子进程 `[Clipboard]::Clear()` 真清空
+- `UpdateClipboard()` 的 else 分支（全空时清空剪贴板）同步复用兜底逻辑，修复 DeleteSlot 删空场景的同类隐患
+
+## [v2.1.3] - 2026-08-01
+
+### 新功能
+- **新增「清除」按钮**：弹窗加宽至 350px，「清除」与「追加」右侧并排（红/灰色）
+- 点击「清除」弹出确认框「确定清空全部结果？」，确认后一次清空全部 10 个槽位
+- 清空时**同步清空剪贴板**，防止旧结果残留被下次追加误读
+- 关键词新增「清除」
+
 ## [v2.1.2] - 2026-07-31
 
 ### Bug 修复

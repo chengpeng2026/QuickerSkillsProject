@@ -1,4 +1,4 @@
-//css_ref System.Windows.Forms.dll
+﻿//css_ref System.Windows.Forms.dll
 //css_ref System.Drawing.dll
 
 using System;
@@ -10,10 +10,12 @@ using System.Windows.Forms;
 using Quicker.Public;
 
 // ============================================================
-// RtfNumberMultiply  v2.1.2  Build: 20260731
+// RtfNumberMultiply  v2.1.4  Build: 20260801
 // 浮动弹窗常驻 ﾗ1.3 累加器
 // 10 个固定槽位，点追加自动复制选中数字并计算
 // 结果顿号分隔 + KN 后缀实时更新剪贴板
+// v2.1.3: 弹窗加宽，追加旁新增「清除」按钮（确认框+同步清空剪贴板）
+// v2.1.4: 修复 SetText("") 在沙盒抛异常 → 多级兜底清空剪贴板
 // Roslyn v2 零样板模式：禁止 namespace/class
 // ============================================================
 
@@ -42,9 +44,9 @@ public static string Exec(IStepContext context)
         popup = new Form
         {
             Text = "RTF 数字乘1.3",
-            Size = new Size(260, 480),
+            Size = new Size(350, 480),
             StartPosition = FormStartPosition.Manual,
-            Location = new Point(Screen.PrimaryScreen.WorkingArea.Right - 280, 40),
+            Location = new Point(Screen.PrimaryScreen.WorkingArea.Right - 370, 40),
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MaximizeBox = false,
             MinimizeBox = false,
@@ -117,6 +119,21 @@ public static string Exec(IStepContext context)
         btnAppend.FlatAppearance.BorderSize = 0;
         btnAppend.Click += (s, e) => { AppendSlot(); };
         popup.Controls.Add(btnAppend);
+
+        // 清除所有结果按钮（红/灰色，右侧并排）
+        var btnClear = new Button
+        {
+            Text = "清除",
+            Location = new Point(198, slotStartY + 10 * (slotHeight + slotSpacing) + 10),
+            Size = new Size(90, 36),
+            Font = new Font("Segoe UI", 11, FontStyle.Bold),
+            BackColor = Color.FromArgb(230, 90, 90),
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat
+        };
+        btnClear.FlatAppearance.BorderSize = 0;
+        btnClear.Click += (s, e) => { ClearAllSlots(); };
+        popup.Controls.Add(btnClear);
 
         // 提示标签
         var lblHint = new Label
@@ -224,6 +241,58 @@ static void DeleteSlot(int idx)
     UpdateClipboard();
 }
 
+// 清除所有结果：确认框 → 清空槽位 → 清空剪贴板（多级兜底）
+static void ClearAllSlots()
+{
+    try
+    {
+        // 防误触：确认框
+        var confirm = MessageBox.Show("确定清空全部结果？", "RTF 数字乘1.3",
+            MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+        if (confirm != DialogResult.OK) return;
+
+        // 清空全部槽位
+        for (int i = 0; i < slots.Count; i++) slots[i] = null;
+        UpdateUI();
+
+        // 同步清空剪贴板（防旧结果残留被下次追加误读，多级兜底）
+        ClearClipboard();
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show("清空失败：" + ex.Message,
+            "RTF 数字乘1.3", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
+
+// 清空剪贴板：SetText("") 在 Roslyn v2 沙盒可能抛异常（ArgumentNullException），
+// 失败则回退到 PowerShell 子进程真清空（[Clipboard]::Clear()，非沙盒可靠）
+static void ClearClipboard()
+{
+    try
+    {
+        Clipboard.SetText("");
+        return; // 沙盒内可用，直接成功
+    }
+    catch { }
+
+    try
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            Arguments = "-NoProfile -ExecutionPolicy Bypass -STA -Command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Clipboard]::Clear()\"",
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        using (var p = System.Diagnostics.Process.Start(psi))
+        {
+            if (p != null) p.WaitForExit(5000);
+        }
+    }
+    catch { }
+}
+
 static void UpdateUI()
 {
     for (int i = 0; i < 10; i++)
@@ -250,7 +319,7 @@ static void UpdateClipboard()
     }
     else
     {
-        // 清空剪贴板用 SetText 代替 Clear
-        Clipboard.SetText("");
+        // 全空时清空剪贴板（复用多级兜底，避免 SetText("") 在沙盒抛异常）
+        ClearClipboard();
     }
 }
