@@ -45,6 +45,24 @@ aliases: [<alternative-title>]
 
 ## Workflows
 
+### Health check: dead wikilinks
+
+Run periodically (monthly review) to find wikilinks pointing to non-existent notes:
+
+```bash
+# 1. Extract all unique wikilink targets
+grep -rhoE '\[\[[^]]+\]\]' "E:/Aiku2026" --include="*.md" -r --exclude-dir=.obsidian \
+  | sed 's/\[\[//;s/\]\]//' | sed 's/|.*//' | sed 's/#.*//' | sort -u
+
+# 2. Compare against actual note filenames (basenames, no extension)
+find "E:/Aiku2026" -name "*.md" -not -path "*/.obsidian/*" -exec basename {} .md \; | sort -u
+```
+
+False positives to ignore:
+- Links inside ``` code fences (design examples like `[[笔记A]]`, `[[Reviews/Daily/2026-07-30]]`, `[[待积累]]`)
+- `[[Folder/Note]]` (example path) — real folder links use the actual path
+- Links to `memory/` entries that exist only as memory files, not vault notes — rewrite as plain text with a `memory/` pointer
+
 ### Search by tags
 
 Search notes with specific frontmatter tags:
