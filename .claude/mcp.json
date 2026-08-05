@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "dida365": {
+      "command": "npx",
+      "args": ["-y", "dida-mcp-server"],
+      "env": {
+        "DIDA_TOKEN": "<DIDA_TOKEN>",
+        "SERVICE": "dida"
+      }
+    }
+  }
+}

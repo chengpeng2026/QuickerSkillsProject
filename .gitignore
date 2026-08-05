@@ -21,3 +21,6 @@ obj/
 # 临时工作区（.scratch/ 已追踪，保留版本控制）
 temp/
 wechat-article-catcher/
+
+# 本地私有 MCP 配置（含真实 token，绝不入库）
+.claude/mcp.local.json

@@ -1,0 +1,6 @@
+# 防护：t cookie 等敏感凭据不入 git
+# 若脚本支持 token 写本地 json，此文件挡明文
+
+scripts/*.json
+*.token
+.DIDA_TOKEN
