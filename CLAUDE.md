@@ -131,6 +131,18 @@ Vault 采用 **领域文件夹 + 根目录 MOC** 结构：
 - **修改任何 Quicker 动作 .cs 文件前**，必须先执行：加载 quicker-skill → 读取 memory `quicker-before-modification-check` → git log 基线 → 确认当前版本已测试通过 → 如果是修 Bug 收集 3 个数字（输入/期望/实际）。跳过任何一步 = 禁止改代码。
 - **每次收到 Quicker 动作 Bug 报告时**，先搜索 vault 加载 [[RtfNumberMultiply 8-1 流程复盘]] 和 [[与 Claude Code 协作防翻车完全指南]]，执行诊断流程（复述→列选项→单变量→3次上限）
 
+### 用户级 Claude 配置备份（2026-08-05 确立）
+
+用户级 `~/.claude/` 中的**自定义 skills** 与**配置文件**需备份到坚果云「笔记软件设置」目录，随坚果云自动同步跨设备：
+
+- **备份目标**：`C:\Users\12089\Nutstore\1\笔记软件设置\claude-skills\`
+- **备份内容**：
+  - `~/.claude/skills/` 下的独立 skill 本体（`SKILL.md` + 脚本 + prompts）
+  - `~/.claude/mcp.json`（含真实 token）、`settings.json`、`settings.local.json`
+- **不备份**：skill 目录内的图片素材（如 `xianyu-images/`）、`__pycache__`、以及 `~/.claude/projects/`（会话记录转储）、`telemetry/`、`cache/` 等运行时产物
+- **不写入项目仓库**：用户级配置属私有（含 token），不进 QuickerSkillsProject git
+- **新增自定义 skill 时**：同步复制本体到上述备份目录，避免漏备份
+
 ## 会话约定
 
 - **会话启动**：SessionStart hook 执行健康检查 + 列出 vault 笔记
